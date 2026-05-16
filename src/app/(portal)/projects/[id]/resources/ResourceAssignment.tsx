@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { CheckCircle2, User } from "lucide-react";
 
-type TeamMember = { id: string; name: string; email: string; role: string };
+type TeamMember = { id: string; name: string; email: string; role: string; specialization?: string | null };
 
 export function ResourceAssignment({ projectId, currentResourceId, team, projectStatus }: {
   projectId: string;
@@ -19,6 +19,20 @@ export function ResourceAssignment({ projectId, currentResourceId, team, project
   const roleLabel: Record<string, string> = {
     PMO_TEAM: "PMO Team",
     PMO_LEAD: "PMO Lead",
+  };
+
+  const specializationLabel: Record<string, string> = {
+    SOLUTIONING: "Solutioning",
+    DELIVERY: "Delivery",
+    COMMERCIAL: "Commercial",
+    GENERAL: "General",
+  };
+
+  const specializationColors: Record<string, string> = {
+    SOLUTIONING: "#7c3aed",
+    DELIVERY: "#0369a1",
+    COMMERCIAL: "#15803d",
+    GENERAL: "#6b7280",
   };
 
   async function assign() {
@@ -62,7 +76,20 @@ export function ResourceAssignment({ projectId, currentResourceId, team, project
               {member.name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-600 text-[#1a1f5e]">{member.name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-600 text-[#1a1f5e]">{member.name}</p>
+                {member.specialization && (
+                  <span
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-600"
+                    style={{
+                      backgroundColor: (specializationColors[member.specialization] ?? "#6b7280") + "18",
+                      color: specializationColors[member.specialization] ?? "#6b7280",
+                    }}
+                  >
+                    {specializationLabel[member.specialization] ?? member.specialization}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-gray-500">{member.email} · {roleLabel[member.role] ?? member.role}</p>
             </div>
             {selected === member.id && <CheckCircle2 size={18} className="text-[#1a1f5e] flex-shrink-0" />}

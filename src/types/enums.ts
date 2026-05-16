@@ -2,6 +2,7 @@ export const UserRole = {
   CLIENT: "CLIENT",
   PMO_LEAD: "PMO_LEAD",
   PMO_TEAM: "PMO_TEAM",
+  SUPER_ADMIN: "SUPER_ADMIN",
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
@@ -47,6 +48,22 @@ export const DocumentType = {
 } as const;
 export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
 
+export const Specialization = {
+  SOLUTIONING: "SOLUTIONING",
+  DELIVERY: "DELIVERY",
+  COMMERCIAL: "COMMERCIAL",
+  GENERAL: "GENERAL",
+} as const;
+export type Specialization = (typeof Specialization)[keyof typeof Specialization];
+
+export const Region = {
+  NA: "NA",
+  EMEA: "EMEA",
+  LATAM: "LATAM",
+  ASPAC: "ASPAC",
+} as const;
+export type Region = (typeof Region)[keyof typeof Region];
+
 export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   SOW_DRAFT: "SOW Draft",
   SIGNED_SOW: "Signed SOW",
@@ -63,8 +80,23 @@ export const SCOPE_LABELS: Record<ScopeOfWork, string> = {
   FIELD_SERVICES: "Field Services",
 };
 
-export const ROLE_LABELS: Record<UserRole, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   CLIENT: "Client",
   PMO_LEAD: "PMO Lead",
   PMO_TEAM: "PMO Team",
+  SUPER_ADMIN: "Super Admin",
+};
+
+export const SPECIALIZATION_LABELS: Record<string, string> = {
+  SOLUTIONING: "Solutioning",
+  DELIVERY: "Delivery",
+  COMMERCIAL: "Commercial",
+  GENERAL: "General",
+};
+
+export const REGION_LABELS: Record<string, string> = {
+  NA: "North America",
+  EMEA: "Europe, Middle East & Africa",
+  LATAM: "Latin America",
+  ASPAC: "Asia Pacific",
 };

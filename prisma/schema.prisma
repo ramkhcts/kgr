@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  name         String
-  passwordHash String
-  role         String   // UserRole: CLIENT | PMO_LEAD | PMO_TEAM
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  role           String   // UserRole: CLIENT | PMO_LEAD | PMO_TEAM | SUPER_ADMIN
+  specialization String?  // Specialization: SOLUTIONING | DELIVERY | COMMERCIAL | GENERAL
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   submittedProjects Project[]       @relation("Submitter")
   assignedProjects  Project[]       @relation("AssignedResource")
@@ -41,6 +42,8 @@ model Project {
   infoRequestMessage   String?
   sowNotes             String?
   poNumber             String?
+  closureNotes         String?
+  region               String   @default("NA")           // Region: NA | EMEA | LATAM | ASPAC
 
   submittedById      String
   submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])
@@ -100,6 +103,7 @@ model RateCard {
   hourlyRate    Float
   dailyRate     Float
   currency      String   @default("USD")
+  region        String   @default("NA")  // Region: NA | EMEA | LATAM | ASPAC
   effectiveDate DateTime @default(now())
   isActive      Boolean  @default(true)
 }

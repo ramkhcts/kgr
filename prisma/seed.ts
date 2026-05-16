@@ -4,14 +4,42 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 const DEFAULT_RATE_CARD = [
-  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Site Support Technician", hourlyRate: 55, dailyRate: 440 },
-  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Senior Site Engineer", hourlyRate: 75, dailyRate: 600 },
-  { serviceType: "SERVICE_DESK", roleName: "Service Desk Analyst", hourlyRate: 45, dailyRate: 360 },
-  { serviceType: "SERVICE_DESK", roleName: "Service Desk Lead", hourlyRate: 65, dailyRate: 520 },
-  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Operator", hourlyRate: 60, dailyRate: 480 },
-  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Shift Supervisor", hourlyRate: 80, dailyRate: 640 },
-  { serviceType: "FIELD_SERVICES", roleName: "Field Services Technician", hourlyRate: 70, dailyRate: 560 },
-  { serviceType: "FIELD_SERVICES", roleName: "Field Services Engineer", hourlyRate: 90, dailyRate: 720 },
+  // NA rates (USD)
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Site Support Technician", hourlyRate: 55, dailyRate: 440, currency: "USD", region: "NA" },
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Senior Site Engineer", hourlyRate: 75, dailyRate: 600, currency: "USD", region: "NA" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Analyst", hourlyRate: 45, dailyRate: 360, currency: "USD", region: "NA" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Lead", hourlyRate: 65, dailyRate: 520, currency: "USD", region: "NA" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Operator", hourlyRate: 60, dailyRate: 480, currency: "USD", region: "NA" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Shift Supervisor", hourlyRate: 80, dailyRate: 640, currency: "USD", region: "NA" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Technician", hourlyRate: 70, dailyRate: 560, currency: "USD", region: "NA" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Engineer", hourlyRate: 90, dailyRate: 720, currency: "USD", region: "NA" },
+  // EMEA rates (EUR, ~15% higher than NA)
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Site Support Technician", hourlyRate: 65, dailyRate: 520, currency: "EUR", region: "EMEA" },
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Senior Site Engineer", hourlyRate: 88, dailyRate: 700, currency: "EUR", region: "EMEA" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Analyst", hourlyRate: 52, dailyRate: 415, currency: "EUR", region: "EMEA" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Lead", hourlyRate: 75, dailyRate: 600, currency: "EUR", region: "EMEA" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Operator", hourlyRate: 70, dailyRate: 560, currency: "EUR", region: "EMEA" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Shift Supervisor", hourlyRate: 92, dailyRate: 740, currency: "EUR", region: "EMEA" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Technician", hourlyRate: 80, dailyRate: 640, currency: "EUR", region: "EMEA" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Engineer", hourlyRate: 105, dailyRate: 840, currency: "EUR", region: "EMEA" },
+  // LATAM rates (USD, ~30% lower than NA)
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Site Support Technician", hourlyRate: 38, dailyRate: 305, currency: "USD", region: "LATAM" },
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Senior Site Engineer", hourlyRate: 52, dailyRate: 415, currency: "USD", region: "LATAM" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Analyst", hourlyRate: 32, dailyRate: 255, currency: "USD", region: "LATAM" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Lead", hourlyRate: 45, dailyRate: 360, currency: "USD", region: "LATAM" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Operator", hourlyRate: 42, dailyRate: 335, currency: "USD", region: "LATAM" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Shift Supervisor", hourlyRate: 56, dailyRate: 450, currency: "USD", region: "LATAM" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Technician", hourlyRate: 49, dailyRate: 390, currency: "USD", region: "LATAM" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Engineer", hourlyRate: 63, dailyRate: 505, currency: "USD", region: "LATAM" },
+  // ASPAC rates (USD, ~10% lower than NA)
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Site Support Technician", hourlyRate: 50, dailyRate: 400, currency: "USD", region: "ASPAC" },
+  { serviceType: "SITE_SUPPORT_SERVICES", roleName: "Senior Site Engineer", hourlyRate: 68, dailyRate: 545, currency: "USD", region: "ASPAC" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Analyst", hourlyRate: 41, dailyRate: 328, currency: "USD", region: "ASPAC" },
+  { serviceType: "SERVICE_DESK", roleName: "Service Desk Lead", hourlyRate: 59, dailyRate: 472, currency: "USD", region: "ASPAC" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Operator", hourlyRate: 54, dailyRate: 432, currency: "USD", region: "ASPAC" },
+  { serviceType: "REMOTE_COMMAND_CENTER", roleName: "RCC Shift Supervisor", hourlyRate: 72, dailyRate: 576, currency: "USD", region: "ASPAC" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Technician", hourlyRate: 63, dailyRate: 504, currency: "USD", region: "ASPAC" },
+  { serviceType: "FIELD_SERVICES", roleName: "Field Services Engineer", hourlyRate: 81, dailyRate: 648, currency: "USD", region: "ASPAC" },
 ];
 
 async function main() {
@@ -27,13 +55,28 @@ async function main() {
   });
   const bob = await prisma.user.upsert({
     where: { email: "bob@kgr.com" },
-    update: { role: "PMO_TEAM" },
-    create: { email: "bob@kgr.com", name: "Bob Chen", passwordHash: hash, role: "PMO_TEAM" },
+    update: { role: "PMO_TEAM", specialization: "SOLUTIONING" },
+    create: { email: "bob@kgr.com", name: "Bob Chen", passwordHash: hash, role: "PMO_TEAM", specialization: "SOLUTIONING" },
   });
   const carol = await prisma.user.upsert({
     where: { email: "carol@kgr.com" },
-    update: { role: "PMO_TEAM" },
-    create: { email: "carol@kgr.com", name: "Carol White", passwordHash: hash, role: "PMO_TEAM" },
+    update: { role: "PMO_TEAM", specialization: "SOLUTIONING" },
+    create: { email: "carol@kgr.com", name: "Carol White", passwordHash: hash, role: "PMO_TEAM", specialization: "SOLUTIONING" },
+  });
+  const derek = await prisma.user.upsert({
+    where: { email: "derek@kgr.com" },
+    update: { role: "PMO_TEAM", specialization: "DELIVERY" },
+    create: { email: "derek@kgr.com", name: "Derek Singh", passwordHash: hash, role: "PMO_TEAM", specialization: "DELIVERY" },
+  });
+  const elena = await prisma.user.upsert({
+    where: { email: "elena@kgr.com" },
+    update: { role: "PMO_TEAM", specialization: "COMMERCIAL" },
+    create: { email: "elena@kgr.com", name: "Elena Moss", passwordHash: hash, role: "PMO_TEAM", specialization: "COMMERCIAL" },
+  });
+  const sam = await prisma.user.upsert({
+    where: { email: "sam@kgr.com" },
+    update: { role: "SUPER_ADMIN" },
+    create: { email: "sam@kgr.com", name: "Sam Admin", passwordHash: hash, role: "SUPER_ADMIN" },
   });
 
   // KarthikLLC clients — single CLIENT role covers request submission + SOW signing + PO upload
@@ -58,14 +101,17 @@ async function main() {
     create: { email: "grace@karthikllc.com", name: "Grace Lee", passwordHash: hash, role: "CLIENT" },
   });
 
+  // Suppress unused variable warnings — these are intentionally upserted
+  void derek; void elena; void sam;
+
   console.log("✅ Users created");
 
-  // Rate card
+  // Rate card (32 entries across 4 regions)
   await prisma.rateCard.deleteMany();
   await prisma.rateCard.createMany({
-    data: DEFAULT_RATE_CARD.map((r) => ({ ...r, currency: "USD" })),
+    data: DEFAULT_RATE_CARD,
   });
-  console.log("✅ Rate card seeded");
+  console.log("✅ Rate card seeded (32 entries × 4 regions)");
 
   // Clean up existing data
   await prisma.comment.deleteMany();
@@ -80,6 +126,7 @@ async function main() {
       description: "Complete refresh of 120 workstations at Dallas headquarters including hardware upgrades, OS reimaging, and peripheral replacement as part of the annual tech refresh cycle.",
       scopeOfWork: "SITE_SUPPORT_SERVICES",
       location: "Dallas, TX",
+      region: "NA",
       anticipatedStartDate: new Date("2024-01-10"),
       anticipatedEndDate: new Date("2024-02-28"),
       budgetAvailable: true,
@@ -95,6 +142,7 @@ async function main() {
       description: "Expand the New York service desk capacity by onboarding 15 additional analysts to support the growing 3,500-seat user base following the Midtown office consolidation.",
       scopeOfWork: "SERVICE_DESK",
       location: "New York, NY",
+      region: "NA",
       anticipatedStartDate: new Date("2024-03-01"),
       anticipatedEndDate: new Date("2024-12-31"),
       budgetAvailable: true,
@@ -111,6 +159,7 @@ async function main() {
       description: "Provide 24/7 Remote Command Center standby coverage for the Chicago data center during the planned network infrastructure upgrade. Coverage required for 6 weeks.",
       scopeOfWork: "REMOTE_COMMAND_CENTER",
       location: "Chicago, IL",
+      region: "NA",
       anticipatedStartDate: new Date("2024-04-15"),
       anticipatedEndDate: new Date("2024-05-31"),
       budgetAvailable: true,
@@ -126,6 +175,7 @@ async function main() {
       description: "Deploy and configure 450 new endpoint devices across 3 Austin campuses as part of Q3 hardware refresh. Includes on-site setup, user data migration, and end-user orientation.",
       scopeOfWork: "FIELD_SERVICES",
       location: "Austin, TX",
+      region: "NA",
       anticipatedStartDate: new Date("2024-07-01"),
       anticipatedEndDate: new Date("2024-09-30"),
       budgetAvailable: true,
@@ -140,6 +190,7 @@ async function main() {
       description: "Establish a dedicated service desk team for the Seattle Innovation Hub, providing Tier 1 and Tier 2 support for 800 engineers and product staff.",
       scopeOfWork: "SITE_SUPPORT_SERVICES",
       location: "Seattle, WA",
+      region: "NA",
       anticipatedStartDate: new Date("2024-05-01"),
       anticipatedEndDate: new Date("2025-04-30"),
       budgetAvailable: true,
@@ -154,6 +205,7 @@ async function main() {
       description: "Pilot a centralized service desk model for the Miami regional office (250 seats) to validate the standardized KGR service model before full Southeast rollout.",
       scopeOfWork: "SERVICE_DESK",
       location: "Miami, FL",
+      region: "NA",
       anticipatedStartDate: new Date("2024-06-01"),
       anticipatedEndDate: new Date("2024-08-31"),
       budgetAvailable: false,
@@ -168,6 +220,7 @@ async function main() {
       description: "Implement RCC monitoring and escalation procedures for the Boston financial trading floor, requiring 24/7 coverage with sub-5-minute incident response SLA.",
       scopeOfWork: "REMOTE_COMMAND_CENTER",
       location: "Boston, MA",
+      region: "NA",
       anticipatedStartDate: new Date("2024-08-01"),
       anticipatedEndDate: new Date("2025-07-31"),
       budgetAvailable: true,
@@ -182,6 +235,7 @@ async function main() {
       description: "Field deployment support for new POS terminal rollout across 35 Denver retail locations, including installation, configuration, and staff training.",
       scopeOfWork: "FIELD_SERVICES",
       location: "Denver, CO",
+      region: "NA",
       anticipatedStartDate: new Date("2024-09-01"),
       anticipatedEndDate: new Date("2024-10-15"),
       budgetAvailable: true,
@@ -196,6 +250,7 @@ async function main() {
       description: "Provide dedicated service desk support for the Atlanta customer experience center handling inbound support requests from KarthikLLC end-customers via phone, email, and chat.",
       scopeOfWork: "SERVICE_DESK",
       location: "Atlanta, GA",
+      region: "NA",
       anticipatedStartDate: new Date("2024-10-01"),
       anticipatedEndDate: new Date("2025-09-30"),
       budgetAvailable: true,
@@ -210,6 +265,7 @@ async function main() {
       description: "Emergency Remote Command Center support needed for the Portland distribution center following the departure of their in-house NOC team. Immediate coverage required.",
       scopeOfWork: "REMOTE_COMMAND_CENTER",
       location: "Portland, OR",
+      region: "NA",
       anticipatedStartDate: new Date("2024-05-20"),
       anticipatedEndDate: new Date("2024-11-19"),
       budgetAvailable: true,
@@ -228,13 +284,14 @@ async function main() {
         description: pd.description,
         scopeOfWork: pd.scopeOfWork,
         location: pd.location,
+        region: pd.region,
         anticipatedStartDate: pd.anticipatedStartDate,
         anticipatedEndDate: pd.anticipatedEndDate,
         budgetAvailable: pd.budgetAvailable,
         notes: pd.notes || null,
         status: pd.status,
         ragStatus: pd.ragStatus,
-        estimatedCost: pd.estimatedCost || null,
+        estimatedCost: (pd as { estimatedCost?: number }).estimatedCost || null,
         submittedById: pd.submittedById,
         assignedResourceId: (pd as { assignedResourceId?: string }).assignedResourceId || null,
         poNumber: (pd as { poNumber?: string }).poNumber || null,
@@ -290,8 +347,11 @@ async function main() {
   console.log("✅ 10 sample projects seeded");
   console.log("\n🎉 Seed complete! Login credentials (password: kgr2024! for all):");
   console.log("   alice@kgr.com         — PMO Lead");
-  console.log("   bob@kgr.com           — PMO Team");
-  console.log("   carol@kgr.com         — PMO Team");
+  console.log("   bob@kgr.com           — PMO Team (Solutioning)");
+  console.log("   carol@kgr.com         — PMO Team (Solutioning)");
+  console.log("   derek@kgr.com         — PMO Team (Delivery)");
+  console.log("   elena@kgr.com         — PMO Team (Commercial)");
+  console.log("   sam@kgr.com           — Super Admin");
   console.log("   david@karthikllc.com  — Client");
   console.log("   emma@karthikllc.com   — Client");
   console.log("   frank@karthikllc.com  — Client");

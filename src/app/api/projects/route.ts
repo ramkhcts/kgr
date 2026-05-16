@@ -23,7 +23,7 @@ export async function GET() {
       orderBy: { updatedAt: "desc" },
     });
   } else {
-    // PMO_LEAD and PMO_TEAM see all projects
+    // PMO_LEAD, PMO_TEAM, and SUPER_ADMIN see all projects
     projects = await prisma.project.findMany({
       include: {
         submittedBy: { select: { id: true, name: true, email: true } },
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
         description: body.description,
         scopeOfWork: body.scopeOfWork,
         location: body.location,
+        region: body.region || "NA",
         anticipatedStartDate: new Date(body.anticipatedStartDate),
         anticipatedEndDate: new Date(body.anticipatedEndDate),
         budgetAvailable: body.budgetAvailable,

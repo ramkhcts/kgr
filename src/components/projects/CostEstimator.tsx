@@ -8,22 +8,25 @@ interface CostEstimatorProps {
   scopeOfWork: string;
   startDate: string;
   endDate: string;
+  region?: string;
 }
 
-export function CostEstimator({ scopeOfWork, startDate, endDate }: CostEstimatorProps) {
+export function CostEstimator({ scopeOfWork, startDate, endDate, region = "NA" }: CostEstimatorProps) {
   const estimate = useMemo(() => {
     if (!scopeOfWork || !startDate || !endDate) return null;
     try {
       const start = new Date(startDate);
       const end = new Date(endDate);
       if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) return null;
-      return estimateCost(scopeOfWork as ScopeOfWork, start, end);
+      return estimateCost(scopeOfWork as ScopeOfWork, start, end, region);
     } catch {
       return null;
     }
-  }, [scopeOfWork, startDate, endDate]);
+  }, [scopeOfWork, startDate, endDate, region]);
 
   if (!estimate || estimate.low === 0) return null;
+
+  const currencySymbol = estimate.currency === "EUR" ? "€" : "$";
 
   return (
     <div className="rounded-xl p-4" style={{ background: "linear-gradient(135deg, #1a1f5e10 0%, #3d2d8e10 100%)", border: "1px solid #1a1f5e20" }}>
@@ -39,17 +42,17 @@ export function CostEstimator({ scopeOfWork, startDate, endDate }: CostEstimator
         </div>
         <div className="bg-white/80 rounded-lg p-3 text-center">
           <p className="text-[10px] text-gray-500 mb-0.5">Estimate (Low)</p>
-          <p className="text-lg font-800 text-[#16a34a]">${estimate.low.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">USD</p>
+          <p className="text-lg font-800 text-[#16a34a]">{currencySymbol}{estimate.low.toLocaleString()}</p>
+          <p className="text-[10px] text-gray-500">{estimate.currency}</p>
         </div>
         <div className="bg-white/80 rounded-lg p-3 text-center">
           <p className="text-[10px] text-gray-500 mb-0.5">Estimate (High)</p>
-          <p className="text-lg font-800 text-[#d97706]">${estimate.high.toLocaleString()}</p>
-          <p className="text-[10px] text-gray-500">USD</p>
+          <p className="text-lg font-800 text-[#d97706]">{currencySymbol}{estimate.high.toLocaleString()}</p>
+          <p className="text-[10px] text-gray-500">{estimate.currency}</p>
         </div>
       </div>
       <p className="text-[10px] text-gray-400 mt-2 text-center">
-        Based on {scopeOfWork.replace(/_/g, " ")} rates · ${estimate.perDay.low}–${estimate.perDay.high}/day
+        Based on {scopeOfWork.replace(/_/g, " ")} rates · {currencySymbol}{estimate.perDay.low}–{currencySymbol}{estimate.perDay.high}/day · {region}
       </p>
     </div>
   );

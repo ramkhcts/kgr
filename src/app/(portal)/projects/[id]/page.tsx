@@ -5,6 +5,7 @@ import { WorkflowTimeline } from "@/components/projects/WorkflowTimeline";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { RAGBadge } from "@/components/projects/RAGBadge";
 import { ProjectActions } from "./ProjectActions";
+import { EditProjectModal } from "./EditProjectModal";
 import { CommentsThread } from "@/components/projects/CommentsThread";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
@@ -219,6 +220,23 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             userRole={user.role}
             userId={user.id}
           />
+
+          {(user.role === "SUPER_ADMIN" || user.role === "PMO_LEAD") && (
+            <EditProjectModal
+              project={{
+                id: project.id,
+                projectName: project.projectName,
+                description: project.description,
+                location: project.location,
+                anticipatedStartDate: project.anticipatedStartDate.toISOString(),
+                anticipatedEndDate: project.anticipatedEndDate.toISOString(),
+                ragStatus: project.ragStatus,
+                notes: project.notes,
+                closureNotes: (project as unknown as { closureNotes?: string | null }).closureNotes,
+              }}
+              userRole={user.role}
+            />
+          )}
         </div>
       </div>
     </div>

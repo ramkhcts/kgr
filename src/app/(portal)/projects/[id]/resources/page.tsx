@@ -18,7 +18,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ id: 
 
   const kgrTeam = await prisma.user.findMany({
     where: { role: { in: ["PMO_TEAM", "PMO_LEAD"] } },
-    select: { id: true, name: true, email: true, role: true },
+    select: { id: true, name: true, email: true, role: true, specialization: true },
   });
 
   return (

@@ -1,13 +1,21 @@
 import { requireAuth } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
-import { ROLE_LABELS } from "@/types/enums";
+import { ROLE_LABELS, SPECIALIZATION_LABELS } from "@/types/enums";
 import { format } from "date-fns";
 
 const ROLE_COLORS: Record<string, string> = {
   CLIENT: "#6366f1",
   PMO_LEAD: "#1a1f5e",
   PMO_TEAM: "#3d2d8e",
+  SUPER_ADMIN: "#b91c1c",
+};
+
+const SPECIALIZATION_COLORS: Record<string, string> = {
+  SOLUTIONING: "#7c3aed",
+  DELIVERY: "#0369a1",
+  COMMERCIAL: "#15803d",
+  GENERAL: "#6b7280",
 };
 
 export default async function AdminPage() {
@@ -29,6 +37,7 @@ export default async function AdminPage() {
               <th className="text-left px-5 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Name</th>
               <th className="text-left px-5 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Email</th>
               <th className="text-left px-5 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Role</th>
+              <th className="text-left px-5 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Specialization</th>
               <th className="text-left px-5 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Member Since</th>
             </tr>
           </thead>
@@ -48,8 +57,21 @@ export default async function AdminPage() {
                 <td className="px-5 py-3">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-600"
                     style={{ backgroundColor: (ROLE_COLORS[u.role] ?? "#6b7280") + "18", color: ROLE_COLORS[u.role] ?? "#6b7280" }}>
-                    {ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] ?? u.role}
+                    {ROLE_LABELS[u.role] ?? u.role}
                   </span>
+                </td>
+                <td className="px-5 py-3">
+                  {u.role === "PMO_TEAM" && u.specialization ? (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-600"
+                      style={{
+                        backgroundColor: (SPECIALIZATION_COLORS[u.specialization] ?? "#6b7280") + "18",
+                        color: SPECIALIZATION_COLORS[u.specialization] ?? "#6b7280",
+                      }}>
+                      {SPECIALIZATION_LABELS[u.specialization] ?? u.specialization}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
                 </td>
                 <td className="px-5 py-3 text-xs text-gray-500">{format(new Date(u.createdAt), "MMM d, yyyy")}</td>
               </tr>

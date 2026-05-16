@@ -1,11 +1,24 @@
 import { ProjectStatus, UserRole } from "@/types/enums";
 
+export type ProjectSnapshot = {
+  documents: { type: string }[];
+  poNumber: string | null;
+  assignedResourceId: string | null;
+  closureNotes: string | null;
+};
+
+export type ExitCriterion = {
+  label: string;
+  check: (project: ProjectSnapshot) => boolean;
+};
+
 export type Transition = {
   from: ProjectStatus;
   to: ProjectStatus;
   allowedRoles: UserRole[];
   label: string;
   requiresField?: string;
+  exitCriteria?: ExitCriterion[];
 };
 
 export const TRANSITIONS: Transition[] = [
@@ -39,12 +52,24 @@ export const TRANSITIONS: Transition[] = [
     to: "SOW_DRAFT",
     allowedRoles: ["PMO_TEAM"],
     label: "Upload SOW Draft",
+    exitCriteria: [
+      {
+        label: "Upload a SOW draft document",
+        check: (p) => p.documents.some((d) => d.type === "SOW_DRAFT"),
+      },
+    ],
   },
   {
     from: "SOW_DRAFT",
     to: "SOW_APPROVAL",
     allowedRoles: ["PMO_LEAD", "PMO_TEAM"],
     label: "Send for Client Approval",
+    exitCriteria: [
+      {
+        label: "Upload a SOW draft document",
+        check: (p) => p.documents.some((d) => d.type === "SOW_DRAFT"),
+      },
+    ],
   },
   {
     from: "SOW_APPROVAL",
@@ -52,6 +77,12 @@ export const TRANSITIONS: Transition[] = [
     allowedRoles: ["CLIENT"],
     label: "Approve & Sign SOW",
     requiresField: "signedSowDocumentId",
+    exitCriteria: [
+      {
+        label: "Client must sign or upload signed SOW",
+        check: (p) => p.documents.some((d) => d.type === "SIGNED_SOW"),
+      },
+    ],
   },
   {
     from: "SOW_APPROVAL",
@@ -71,6 +102,12 @@ export const TRANSITIONS: Transition[] = [
     allowedRoles: ["CLIENT", "PMO_LEAD"],
     label: "Mark PO Received",
     requiresField: "poNumber",
+    exitCriteria: [
+      {
+        label: "Enter PO number",
+        check: (p) => !!p.poNumber,
+      },
+    ],
   },
   {
     from: "PO_RECEIVED",
@@ -78,6 +115,12 @@ export const TRANSITIONS: Transition[] = [
     allowedRoles: ["PMO_LEAD", "PMO_TEAM"],
     label: "Assign Resource",
     requiresField: "assignedResourceId",
+    exitCriteria: [
+      {
+        label: "Select a resource to assign",
+        check: (p) => !!p.assignedResourceId,
+      },
+    ],
   },
   {
     from: "RESOURCE_ASSIGNED",
@@ -90,6 +133,12 @@ export const TRANSITIONS: Transition[] = [
     to: "CLOSED_SUCCESS",
     allowedRoles: ["PMO_LEAD"],
     label: "Close Successfully",
+    exitCriteria: [
+      {
+        label: "Add closure notes",
+        check: (p) => !!p.closureNotes,
+      },
+    ],
   },
 ];
 
@@ -102,6 +151,19 @@ export function getAvailableTransitions(
   return TRANSITIONS.filter(
     (t) => t.from === currentStatus && t.allowedRoles.includes(userRole)
   );
+}
+
+export function getAllTransitionsFrom(currentStatus: ProjectStatus): Transition[] {
+  return TRANSITIONS.filter((t) => t.from === currentStatus);
+}
+
+export function getPendingCriteria(
+  transition: Transition,
+  project: ProjectSnapshot
+): string[] {
+  return (transition.exitCriteria ?? [])
+    .filter((c) => !c.check(project))
+    .map((c) => c.label);
 }
 
 export const STATUS_LABELS: Record<ProjectStatus, string> = {

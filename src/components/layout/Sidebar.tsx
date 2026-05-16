@@ -15,12 +15,12 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["CLIENT", "PMO_LEAD", "PMO_TEAM"] },
-  { label: "All Projects", href: "/projects", icon: <FolderKanban size={18} />, roles: ["PMO_LEAD", "PMO_TEAM"] },
+  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["CLIENT", "PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"] },
+  { label: "All Projects", href: "/projects", icon: <FolderKanban size={18} />, roles: ["PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"] },
   { label: "My Requests", href: "/projects", icon: <FolderKanban size={18} />, roles: ["CLIENT"] },
   { label: "New Request", href: "/projects/new", icon: <PlusCircle size={18} />, roles: ["CLIENT"] },
-  { label: "Rate Card", href: "/rate-card", icon: <CreditCard size={18} />, roles: ["CLIENT", "PMO_LEAD", "PMO_TEAM"] },
-  { label: "User Management", href: "/admin", icon: <Users size={18} />, roles: ["PMO_LEAD"] },
+  { label: "Rate Card", href: "/rate-card", icon: <CreditCard size={18} />, roles: ["CLIENT", "PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"] },
+  { label: "User Management", href: "/admin", icon: <Users size={18} />, roles: ["PMO_LEAD", "SUPER_ADMIN"] },
 ];
 
 export function Sidebar({ userRole, userName }: { userRole: string; userName: string }) {

@@ -16,6 +16,7 @@ const schema = z.object({
   description: z.string().min(20, "Please provide a detailed description (at least 20 characters)"),
   scopeOfWork: z.enum(["SITE_SUPPORT_SERVICES", "SERVICE_DESK", "REMOTE_COMMAND_CENTER", "FIELD_SERVICES"]),
   location: z.string().min(2, "Please specify the location"),
+  region: z.enum(["NA", "EMEA", "LATAM", "ASPAC"]),
   anticipatedStartDate: z.string().min(1, "Start date is required"),
   anticipatedEndDate: z.string().min(1, "End date is required"),
   budgetAvailable: z.any().transform((v): boolean => v === true || v === "true"),
@@ -38,12 +39,13 @@ export function IntakeForm() {
 
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { budgetAvailable: true },
+    defaultValues: { budgetAvailable: true, region: "NA" },
   });
 
   const scopeOfWork = watch("scopeOfWork");
   const startDate = watch("anticipatedStartDate");
   const endDate = watch("anticipatedEndDate");
+  const region = watch("region");
 
   async function onSubmit(data: FormData) {
     setError("");
@@ -120,6 +122,18 @@ export function IntakeForm() {
           {...register("location")}
         />
 
+        <Select
+          label="Region *"
+          options={[
+            { value: "NA", label: "North America" },
+            { value: "EMEA", label: "Europe, Middle East & Africa" },
+            { value: "LATAM", label: "Latin America" },
+            { value: "ASPAC", label: "Asia Pacific" },
+          ]}
+          error={errors.region?.message}
+          {...register("region")}
+        />
+
         <Input
           label="Anticipated Start Date *"
           type="date"
@@ -163,7 +177,7 @@ export function IntakeForm() {
 
       {/* Live cost estimate */}
       {scopeOfWork && startDate && endDate && (
-        <CostEstimator scopeOfWork={scopeOfWork} startDate={startDate} endDate={endDate} />
+        <CostEstimator scopeOfWork={scopeOfWork} startDate={startDate} endDate={endDate} region={region} />
       )}
 
       <div className="flex justify-end gap-3 pt-2">

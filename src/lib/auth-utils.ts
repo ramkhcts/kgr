@@ -13,7 +13,8 @@ export async function requireAuth(allowedRoles?: UserRole[]): Promise<SessionUse
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as SessionUser;
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  // SUPER_ADMIN can access everything PMO_LEAD can access
+  if (allowedRoles && !allowedRoles.includes(user.role) && user.role !== "SUPER_ADMIN") {
     redirect("/dashboard");
   }
   return user;

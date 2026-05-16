@@ -1,15 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
-import { getAvailableTransitions, CANCEL_ALLOWED_ROLES } from "@/lib/workflow";
+import { getAvailableTransitions, CANCEL_ALLOWED_ROLES, TRANSITIONS } from "@/lib/workflow";
 import { ProjectStatus, UserRole, RAGStatus } from "@/types/enums";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
-import { FileText, UserCheck, XCircle, ArrowRight, Upload } from "lucide-react";
+import { FileText, UserCheck, XCircle, ArrowRight, Upload, AlertTriangle, CheckCircle2, ShieldAlert } from "lucide-react";
 
 type DocumentMeta = { id: string; name: string; type: string };
 
@@ -18,6 +18,16 @@ type Project = {
   status: string;
   ragStatus: string;
   documents?: DocumentMeta[];
+};
+
+type ExitCriteriaResult = {
+  currentStatus: string;
+  criteria: {
+    toStatus: string;
+    label: string;
+    pending: string[];
+    met: boolean;
+  }[];
 };
 
 const RAG_OPTIONS = [
@@ -36,6 +46,7 @@ export function ProjectActions({ project, userRole, userId }: {
   const [showCancel, setShowCancel] = useState(false);
   const [showInfoRequest, setShowInfoRequest] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showOverride, setShowOverride] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const [ragStatus, setRagStatus] = useState(project.ragStatus);
@@ -43,28 +54,72 @@ export function ProjectActions({ project, userRole, userId }: {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadType, setUploadType] = useState("OTHER");
   const [uploadName, setUploadName] = useState("");
+  const [pendingCriteria, setPendingCriteria] = useState<string[]>([]);
+  const [overrideReason, setOverrideReason] = useState("");
+  const [overrideToStatus, setOverrideToStatus] = useState("");
+  const [exitCriteria, setExitCriteria] = useState<ExitCriteriaResult | null>(null);
 
   const currentStatus = project.status as ProjectStatus;
   const role = userRole as UserRole;
-  const transitions = getAvailableTransitions(currentStatus, role);
-  const canCancel = CANCEL_ALLOWED_ROLES.includes(role) && !["CLOSED_SUCCESS", "CANCELLED", "HANDED_TO_OPERATIONS"].includes(currentStatus);
-  const canUpload = ["PMO_LEAD", "PMO_TEAM"].includes(userRole);
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
+  // SUPER_ADMIN gets PMO_LEAD transitions for display
+  const effectiveRole: UserRole = isSuperAdmin ? "PMO_LEAD" : role;
+  const transitions = getAvailableTransitions(currentStatus, effectiveRole);
+  const canCancel =
+    (CANCEL_ALLOWED_ROLES.includes(role) || isSuperAdmin) &&
+    !["CLOSED_SUCCESS", "CANCELLED", "HANDED_TO_OPERATIONS"].includes(currentStatus);
+  const canUpload = ["PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"].includes(userRole);
 
   const sowDoc = project.documents?.find((d) => d.type === "SOW_DRAFT");
 
+  // Fetch exit criteria proactively
+  useEffect(() => {
+    fetch(`/api/projects/${project.id}/exit-criteria`)
+      .then((r) => r.json())
+      .then((data: ExitCriteriaResult) => setExitCriteria(data))
+      .catch(() => {});
+  }, [project.id, project.status]);
+
   async function doTransition(toStatus: string, extra?: Record<string, unknown>) {
     setLoading(toStatus);
+    setPendingCriteria([]);
     try {
       const res = await fetch(`/api/projects/${project.id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toStatus, notes, ragStatus, ...extra }),
       });
-      if (res.ok) router.refresh();
+      if (res.ok) {
+        router.refresh();
+      } else {
+        const data = await res.json();
+        if (data.pending && Array.isArray(data.pending)) {
+          setPendingCriteria(data.pending);
+        }
+      }
     } finally {
       setLoading(null);
       setShowInfoRequest(false);
       setShowCancel(false);
+    }
+  }
+
+  async function doOverride() {
+    if (!overrideReason || !overrideToStatus) return;
+    setLoading("override");
+    try {
+      const res = await fetch(`/api/projects/${project.id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toStatus: overrideToStatus, overrideReason, notes }),
+      });
+      if (res.ok) {
+        setShowOverride(false);
+        setOverrideReason("");
+        router.refresh();
+      }
+    } finally {
+      setLoading(null);
     }
   }
 
@@ -88,13 +143,22 @@ export function ProjectActions({ project, userRole, userId }: {
     }
   }
 
+  // All possible statuses for override selector
+  const allStatuses = Object.values({
+    SUBMITTED: "SUBMITTED", UNDER_REVIEW: "UNDER_REVIEW", INFO_REQUIRED: "INFO_REQUIRED",
+    SOLUTIONING: "SOLUTIONING", SOW_DRAFT: "SOW_DRAFT", SOW_APPROVAL: "SOW_APPROVAL",
+    SOW_SIGNED: "SOW_SIGNED", PO_REQUESTED: "PO_REQUESTED", PO_RECEIVED: "PO_RECEIVED",
+    RESOURCE_ASSIGNED: "RESOURCE_ASSIGNED", HANDED_TO_OPERATIONS: "HANDED_TO_OPERATIONS",
+    CLOSED_SUCCESS: "CLOSED_SUCCESS", CANCELLED: "CANCELLED",
+  } as Record<string, string>).filter((s) => s !== currentStatus);
+
   return (
     <>
       <Card>
         <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-3">Actions</p>
         <div className="space-y-2">
           {/* RAG Update — PMO only */}
-          {["PMO_LEAD", "PMO_TEAM"].includes(userRole) && (
+          {["PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"].includes(userRole) && (
             <div className="space-y-1.5">
               <Select
                 label="Update RAG Status"
@@ -151,7 +215,7 @@ export function ProjectActions({ project, userRole, userId }: {
           )}
 
           {/* Resource Assignment */}
-          {currentStatus === "PO_RECEIVED" && ["PMO_LEAD", "PMO_TEAM"].includes(role) && (
+          {currentStatus === "PO_RECEIVED" && ["PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"].includes(userRole) && (
             <Link href={`/projects/${project.id}/resources`}>
               <Button className="w-full" size="sm">
                 <UserCheck size={14} />
@@ -166,6 +230,24 @@ export function ProjectActions({ project, userRole, userId }: {
               <Upload size={13} />
               Upload Document
             </Button>
+          )}
+
+          {/* Pending criteria warning */}
+          {pendingCriteria.length > 0 && (
+            <div className="rounded-lg p-3 bg-amber-50 border border-amber-200">
+              <div className="flex items-center gap-1.5 mb-2">
+                <AlertTriangle size={13} className="text-amber-600 flex-shrink-0" />
+                <p className="text-xs font-700 text-amber-700">Cannot advance — items needed:</p>
+              </div>
+              <ul className="space-y-1">
+                {pendingCriteria.map((c, i) => (
+                  <li key={i} className="text-xs text-amber-700 flex items-start gap-1.5">
+                    <span className="mt-0.5 flex-shrink-0">•</span>
+                    {c}
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
 
           {/* Workflow transitions */}
@@ -192,6 +274,19 @@ export function ProjectActions({ project, userRole, userId }: {
             </Button>
           )}
 
+          {/* SUPER_ADMIN override */}
+          {isSuperAdmin && !["CLOSED_SUCCESS", "CANCELLED"].includes(currentStatus) && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full border-red-300 text-red-700 hover:bg-red-50"
+              onClick={() => setShowOverride(true)}
+            >
+              <ShieldAlert size={13} />
+              Admin Override
+            </Button>
+          )}
+
           {/* Cancel */}
           {canCancel && (
             <Button size="sm" variant="danger" className="w-full" onClick={() => setShowCancel(true)}>
@@ -200,6 +295,32 @@ export function ProjectActions({ project, userRole, userId }: {
             </Button>
           )}
         </div>
+
+        {/* What's needed to advance */}
+        {exitCriteria && exitCriteria.criteria.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-[#e2e4f0]">
+            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-2">What&apos;s Needed to Advance</p>
+            {exitCriteria.criteria.map((c) => (
+              <div key={c.toStatus} className="mb-2">
+                <p className="text-[10px] font-600 text-gray-500 mb-1">→ {c.label}</p>
+                <ul className="space-y-1">
+                  {(c.pending.length === 0 ? [] : c.pending).map((item, i) => (
+                    <li key={i} className="text-xs text-amber-700 flex items-start gap-1.5">
+                      <AlertTriangle size={11} className="flex-shrink-0 mt-0.5" />
+                      {item}
+                    </li>
+                  ))}
+                  {c.met && (
+                    <li className="text-xs text-green-700 flex items-center gap-1.5">
+                      <CheckCircle2 size={11} className="flex-shrink-0" />
+                      All criteria met
+                    </li>
+                  )}
+                </ul>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
       {/* Info Request Modal */}
@@ -237,6 +358,47 @@ export function ProjectActions({ project, userRole, userId }: {
             <Button variant="outline" onClick={() => setShowCancel(false)}>Back</Button>
             <Button variant="danger" loading={loading === "CANCELLED"} onClick={() => doTransition("CANCELLED", { cancelledReason: cancelReason })}>
               Confirm Cancellation
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin Override Modal */}
+      <Modal open={showOverride} onClose={() => setShowOverride(false)} title="Admin Status Override">
+        <div className="space-y-4">
+          <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+            <p className="text-xs font-600 text-red-700">This bypasses all role checks and exit criteria. Use with caution.</p>
+          </div>
+          <div>
+            <label className="block text-xs font-600 text-gray-700 mb-1">Override to Status</label>
+            <select
+              className="w-full text-sm border border-[#e2e4f0] rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#1a1f5e]/20"
+              value={overrideToStatus}
+              onChange={(e) => setOverrideToStatus(e.target.value)}
+            >
+              <option value="">Select target status...</option>
+              {allStatuses.map((s) => (
+                <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+              ))}
+            </select>
+          </div>
+          <Textarea
+            label="Override Reason *"
+            value={overrideReason}
+            onChange={(e) => setOverrideReason(e.target.value)}
+            placeholder="Explain why this override is necessary..."
+            rows={3}
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowOverride(false)}>Cancel</Button>
+            <Button
+              variant="danger"
+              loading={loading === "override"}
+              disabled={!overrideReason || !overrideToStatus}
+              onClick={doOverride}
+            >
+              <ShieldAlert size={13} />
+              Apply Override
             </Button>
           </div>
         </div>
