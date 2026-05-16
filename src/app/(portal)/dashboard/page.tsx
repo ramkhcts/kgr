@@ -82,12 +82,12 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-5">
       {/* Welcome header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-800 text-[#1a1f5e]">Welcome, {user.name.split(" ")[0]}</h1>
-          <p className="text-sm text-gray-500">{roleLabel[user.role] ?? user.role} · KGR iDemand Portal · {format(now, "EEEE, MMMM d, yyyy")}</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-2xl font-800 text-[#1a1f5e] truncate">Welcome, {user.name.split(" ")[0]}</h1>
+          <p className="text-xs md:text-sm text-gray-500 truncate">{roleLabel[user.role] ?? user.role} · KGR · {format(now, "MMM d, yyyy")}</p>
         </div>
-        <div className="flex items-center gap-3 bg-white rounded-xl px-4 py-2 border border-[#e2e4f0]">
+        <div className="hidden sm:flex items-center gap-3 bg-white rounded-xl px-4 py-2 border border-[#e2e4f0] flex-shrink-0">
           <KGRLogo size={28} />
           <span className="text-[#e2e4f0]">×</span>
           <KarthikLLCLogo size={28} />

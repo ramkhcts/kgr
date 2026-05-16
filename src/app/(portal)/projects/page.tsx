@@ -28,18 +28,19 @@ export default async function ProjectsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h1 className="text-xl font-800 text-[#1a1f5e]">
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="min-w-0">
+          <h1 className="text-xl font-800 text-[#1a1f5e] truncate">
             {user.role === "CLIENT" ? "My Requests" : "All Projects"}
           </h1>
           <p className="text-sm text-gray-500">{projects.length} project{projects.length !== 1 ? "s" : ""} found</p>
         </div>
         {["CLIENT", "PMO_LEAD"].includes(user.role) && (
-          <Link href="/projects/new">
+          <Link href="/projects/new" className="flex-shrink-0">
             <Button>
               <PlusCircle size={15} />
-              New Request
+              <span className="hidden sm:inline">New Request</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </Link>
         )}

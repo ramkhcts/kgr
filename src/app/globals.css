@@ -118,3 +118,29 @@ body {
 input, select, textarea {
   font-family: var(--font-sans);
 }
+
+/* Mobile: prevent text size inflation */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Light theme sidebar overrides */
+[data-theme="light"] .sidebar-gradient {
+  background: white;
+  border-right: 1px solid #e2e4f0;
+}
+
+/* Responsive table wrapper — horizontal scroll on narrow screens */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 768px) {
+  .status-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+}
