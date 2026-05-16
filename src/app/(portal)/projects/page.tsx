@@ -7,7 +7,8 @@ import { PlusCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
-import { SCOPE_LABELS } from "@/types/enums";
+import { SCOPE_LABELS, ROLE_LABELS, ProjectStatus } from "@/types/enums";
+import { STATUS_PENDING_WITH } from "@/lib/workflow";
 
 export default async function ProjectsPage() {
   const user = await requireAuth();
@@ -81,7 +82,21 @@ export default async function ProjectsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{p.location}</td>
                     <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{p.submittedBy.name}</td>
-                    <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={p.status} /></td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={p.status} />
+                      {(() => {
+                        const pw = STATUS_PENDING_WITH[p.status as ProjectStatus];
+                        if (!pw) return null;
+                        const isMe = pw.roles.some(
+                          (r) => r === user.role || (user.role === "SUPER_ADMIN" && ["PMO_LEAD","PMO_TEAM"].includes(r))
+                        );
+                        return (
+                          <p className={`text-[10px] mt-1 font-500 ${isMe ? "text-amber-600" : "text-gray-400"}`}>
+                            {isMe ? "⚡ Your turn" : `⏳ ${pw.roles.map((r) => ROLE_LABELS[r] ?? r).join(" / ")}`}
+                          </p>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap"><RAGBadge status={p.ragStatus} /></td>
                     <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{p.assignedResource?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">

@@ -10,9 +10,9 @@ import { KGRLogo } from "@/components/layout/KGRLogo";
 import { KarthikLLCLogo } from "@/components/layout/KarthikLLCLogo";
 import Link from "next/link";
 import { format, startOfMonth } from "date-fns";
+import { STATUS_PENDING_WITH } from "@/lib/workflow";
 import { ExternalLink } from "lucide-react";
-import { ProjectStatus, UserRole } from "@/types/enums";
-import { SCOPE_LABELS } from "@/types/enums";
+import { ProjectStatus, UserRole, ROLE_LABELS, SCOPE_LABELS } from "@/types/enums";
 
 export default async function DashboardPage() {
   const user = await requireAuth();
@@ -168,7 +168,21 @@ export default async function DashboardPage() {
                       <p className="text-xs font-600 text-[#1a1f5e] line-clamp-1">{p.projectName}</p>
                       <p className="text-[10px] text-gray-400">{SCOPE_LABELS[p.scopeOfWork as keyof typeof SCOPE_LABELS]}</p>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap"><StatusBadge status={p.status} /></td>
+                    <td className="px-4 py-2.5">
+                      <StatusBadge status={p.status} />
+                      {(() => {
+                        const pw = STATUS_PENDING_WITH[p.status as ProjectStatus];
+                        if (!pw) return null;
+                        const isMe = pw.roles.some(
+                          (r) => r === user.role || (user.role === "SUPER_ADMIN" && ["PMO_LEAD","PMO_TEAM"].includes(r))
+                        );
+                        return (
+                          <p className={`text-[10px] mt-0.5 font-500 ${isMe ? "text-amber-600" : "text-gray-400"}`}>
+                            {isMe ? "⚡ Your turn" : `⏳ ${pw.roles.map((r) => ROLE_LABELS[r] ?? r).join(" / ")}`}
+                          </p>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap"><RAGBadge status={p.ragStatus} /></td>
                     <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{p.assignedResource?.name ?? "—"}</td>
                     <td className="px-4 py-2.5">

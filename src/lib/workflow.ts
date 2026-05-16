@@ -198,6 +198,24 @@ export const STATUS_ORDER: ProjectStatus[] = [
   "CANCELLED",
 ];
 
+// Who holds the ball at each status, and what they need to do
+export const STATUS_PENDING_WITH: Partial<Record<ProjectStatus, {
+  roles: UserRole[];
+  hint: string;
+}>> = {
+  SUBMITTED:            { roles: ["PMO_LEAD"],             hint: "PMO Lead needs to begin review" },
+  UNDER_REVIEW:         { roles: ["PMO_LEAD"],             hint: "PMO Lead is reviewing — assign to solutioning or request info" },
+  INFO_REQUIRED:        { roles: ["CLIENT"],               hint: "Client needs to provide the requested information" },
+  SOLUTIONING:          { roles: ["PMO_TEAM"],             hint: "PMO Team needs to prepare and upload a SOW draft" },
+  SOW_DRAFT:            { roles: ["PMO_LEAD", "PMO_TEAM"], hint: "PMO needs to finalise and send SOW for client approval" },
+  SOW_APPROVAL:         { roles: ["CLIENT"],               hint: "Client needs to review and sign the SOW" },
+  SOW_SIGNED:           { roles: ["PMO_LEAD"],             hint: "PMO Lead needs to raise a Purchase Order request" },
+  PO_REQUESTED:         { roles: ["CLIENT"],               hint: "Client needs to submit the Purchase Order" },
+  PO_RECEIVED:          { roles: ["PMO_LEAD", "PMO_TEAM"], hint: "PMO needs to assign a resource to this project" },
+  RESOURCE_ASSIGNED:    { roles: ["PMO_LEAD"],             hint: "PMO Lead needs to hand the project over to Operations" },
+  HANDED_TO_OPERATIONS: { roles: ["PMO_LEAD"],             hint: "PMO Lead needs to formally close the project" },
+};
+
 export const STATUS_COLORS: Record<ProjectStatus, string> = {
   SUBMITTED: "#6366f1",
   UNDER_REVIEW: "#f59e0b",
