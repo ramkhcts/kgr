@@ -1,6 +1,7 @@
 "use client";
-import { Bell, Menu, Sun, Moon } from "lucide-react";
+import { Menu, Sun, Moon } from "lucide-react";
 import { KarthikLLCLogo } from "./KarthikLLCLogo";
+import { NotificationBell } from "./NotificationBell";
 import { ROLE_LABELS } from "@/types/enums";
 import { usePortal } from "./PortalContext";
 
@@ -31,9 +32,8 @@ export function Topbar({ userName, userRole }: { userName: string; userRole: str
           {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-        <button className="p-2 rounded-lg hover:bg-[#f4f5fb] text-gray-400 hover:text-[#1a1f5e] transition-colors">
-          <Bell size={18} />
-        </button>
+        {/* Live notification bell */}
+        <NotificationBell userRole={userRole} />
 
         <div className="flex items-center gap-2">
           <div className="hidden sm:block">
