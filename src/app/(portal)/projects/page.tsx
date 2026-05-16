@@ -13,15 +13,9 @@ export default async function ProjectsPage() {
   const user = await requireAuth();
 
   let projects;
-  if (user.role === "BUSINESS_USER") {
+  if (user.role === "CLIENT") {
     projects = await prisma.project.findMany({
       where: { submittedById: user.id },
-      include: { submittedBy: { select: { name: true } }, assignedResource: { select: { name: true } } },
-      orderBy: { updatedAt: "desc" },
-    });
-  } else if (user.role === "CUSTOMER_APPROVER") {
-    projects = await prisma.project.findMany({
-      where: { status: { in: ["SOW_APPROVAL", "SOW_SIGNED", "PO_REQUESTED", "PO_RECEIVED", "RESOURCE_ASSIGNED", "CLOSED_SUCCESS"] } },
       include: { submittedBy: { select: { name: true } }, assignedResource: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },
     });
@@ -37,11 +31,11 @@ export default async function ProjectsPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-800 text-[#1a1f5e]">
-            {user.role === "BUSINESS_USER" ? "My Requests" : "All Projects"}
+            {user.role === "CLIENT" ? "My Requests" : "All Projects"}
           </h1>
           <p className="text-sm text-gray-500">{projects.length} project{projects.length !== 1 ? "s" : ""} found</p>
         </div>
-        {["BUSINESS_USER", "PROGRAM_MANAGER"].includes(user.role) && (
+        {["CLIENT", "PMO_LEAD"].includes(user.role) && (
           <Link href="/projects/new">
             <Button>
               <PlusCircle size={15} />
@@ -71,7 +65,7 @@ export default async function ProjectsPage() {
               {projects.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="text-center py-12 text-gray-400 text-sm">
-                    No projects found. {user.role === "BUSINESS_USER" && "Submit your first request to get started."}
+                    No projects found. {user.role === "CLIENT" && "Submit your first request to get started."}
                   </td>
                 </tr>
               ) : (

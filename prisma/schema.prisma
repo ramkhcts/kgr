@@ -12,7 +12,7 @@ model User {
   email        String   @unique
   name         String
   passwordHash String
-  role         String   // UserRole: BUSINESS_USER | PROGRAM_MANAGER | SOLUTIONING_TEAM | CUSTOMER_APPROVER
+  role         String   // UserRole: CLIENT | PMO_LEAD | PMO_TEAM
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -20,6 +20,8 @@ model User {
   assignedProjects  Project[]       @relation("AssignedResource")
   auditLogs         AuditLog[]
   statusChanges     StatusHistory[]
+  comments          Comment[]
+  uploadedDocuments Document[]
 }
 
 model Project {
@@ -39,10 +41,6 @@ model Project {
   infoRequestMessage   String?
   sowNotes             String?
   poNumber             String?
-  sowDocumentPath      String?
-  signedSowPath        String?
-  signatureDataUrl     String?
-  poDocumentPath       String?
 
   submittedById      String
   submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])
@@ -54,6 +52,33 @@ model Project {
 
   statusHistory StatusHistory[]
   auditLogs     AuditLog[]
+  documents     Document[]
+  comments      Comment[]
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name         String
+  type         String   // DocumentType: SOW_DRAFT | SIGNED_SOW | STAFFING_ORDER | PO | COMMERCIAL | OTHER
+  mimeType     String   @default("application/pdf")
+  size         Int
+  content      Bytes
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model StatusHistory {

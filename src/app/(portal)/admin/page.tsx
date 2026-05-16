@@ -1,24 +1,17 @@
 import { requireAuth } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
+import { ROLE_LABELS } from "@/types/enums";
 import { format } from "date-fns";
 
-const ROLE_LABELS: Record<string, string> = {
-  BUSINESS_USER: "Business User",
-  PROGRAM_MANAGER: "Program Manager",
-  SOLUTIONING_TEAM: "Solutioning Team",
-  CUSTOMER_APPROVER: "Customer Approver",
-};
-
 const ROLE_COLORS: Record<string, string> = {
-  BUSINESS_USER: "#6366f1",
-  PROGRAM_MANAGER: "#1a1f5e",
-  SOLUTIONING_TEAM: "#3d2d8e",
-  CUSTOMER_APPROVER: "#0ea5e9",
+  CLIENT: "#6366f1",
+  PMO_LEAD: "#1a1f5e",
+  PMO_TEAM: "#3d2d8e",
 };
 
 export default async function AdminPage() {
-  await requireAuth(["PROGRAM_MANAGER"]);
+  await requireAuth(["PMO_LEAD"]);
 
   const users = await prisma.user.findMany({ orderBy: [{ role: "asc" }, { name: "asc" }] });
 
@@ -55,7 +48,7 @@ export default async function AdminPage() {
                 <td className="px-5 py-3">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-600"
                     style={{ backgroundColor: (ROLE_COLORS[u.role] ?? "#6b7280") + "18", color: ROLE_COLORS[u.role] ?? "#6b7280" }}>
-                    {ROLE_LABELS[u.role] ?? u.role}
+                    {ROLE_LABELS[u.role as keyof typeof ROLE_LABELS] ?? u.role}
                   </span>
                 </td>
                 <td className="px-5 py-3 text-xs text-gray-500">{format(new Date(u.createdAt), "MMM d, yyyy")}</td>

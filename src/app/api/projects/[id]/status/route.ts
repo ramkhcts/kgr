@@ -19,14 +19,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const userRole = user.role as UserRole;
   const currentStatus = project.status as ProjectStatus;
 
-  // Handle cancellation
   if (toStatus === "CANCELLED") {
     if (!CANCEL_ALLOWED_ROLES.includes(userRole)) {
-      return NextResponse.json({ error: "Only Program Managers can cancel projects" }, { status: 403 });
+      return NextResponse.json({ error: "Only PMO Leads can cancel projects" }, { status: 403 });
     }
     const updated = await prisma.project.update({
       where: { id },
-      data: { status: "CANCELLED", cancelledReason: cancelledReason || "Cancelled by PM" },
+      data: { status: "CANCELLED", cancelledReason: cancelledReason || "Cancelled by PMO Lead" },
     });
     await prisma.statusHistory.create({
       data: { projectId: id, fromStatus: currentStatus, toStatus: "CANCELLED", changedById: user.id, notes: cancelledReason },
@@ -34,7 +33,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json(updated);
   }
 
-  // Check valid transition
   const available = getAvailableTransitions(currentStatus, userRole);
   const transition = available.find((t) => t.to === toStatus);
 
@@ -45,7 +43,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 
-  // Build update data
   const updateData: Record<string, unknown> = { status: toStatus };
   if (ragStatus) updateData.ragStatus = ragStatus;
   if (infoRequestMessage) updateData.infoRequestMessage = infoRequestMessage;
@@ -62,7 +59,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     data: { projectId: id, userId: user.id, action: `Status changed: ${currentStatus} → ${toStatus}`, details: notes },
   });
 
-  // Email notifications (console log in dev)
   console.log(`[EMAIL] Status change: ${project.projectName} → ${toStatus} by ${user.name}`);
 
   return NextResponse.json(updated);

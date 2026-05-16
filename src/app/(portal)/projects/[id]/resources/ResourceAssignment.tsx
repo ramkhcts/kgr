@@ -17,8 +17,8 @@ export function ResourceAssignment({ projectId, currentResourceId, team, project
   const [loading, setLoading] = useState(false);
 
   const roleLabel: Record<string, string> = {
-    SOLUTIONING_TEAM: "Solutioning Team",
-    PROGRAM_MANAGER: "Program Manager",
+    PMO_TEAM: "PMO Team",
+    PMO_LEAD: "PMO Lead",
   };
 
   async function assign() {

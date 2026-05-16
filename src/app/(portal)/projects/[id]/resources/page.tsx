@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
 export default async function ResourcesPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireAuth(["PROGRAM_MANAGER", "SOLUTIONING_TEAM"]);
+  const user = await requireAuth(["PMO_LEAD", "PMO_TEAM"]);
   const { id } = await params;
 
   const project = await prisma.project.findUnique({
@@ -17,7 +17,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ id: 
   if (!project) notFound();
 
   const kgrTeam = await prisma.user.findMany({
-    where: { role: { in: ["SOLUTIONING_TEAM", "PROGRAM_MANAGER"] } },
+    where: { role: { in: ["PMO_TEAM", "PMO_LEAD"] } },
     select: { id: true, name: true, email: true, role: true },
   });
 

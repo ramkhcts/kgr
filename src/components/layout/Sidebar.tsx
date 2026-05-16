@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { LayoutDashboard, FolderKanban, PlusCircle, CreditCard, Users, LogOut, ChevronRight } from "lucide-react";
 import { KGRLogo } from "./KGRLogo";
 import { signOut } from "next-auth/react";
+import { ROLE_LABELS } from "@/types/enums";
 
 type NavItem = {
   label: string;
@@ -14,12 +15,12 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["BUSINESS_USER", "PROGRAM_MANAGER", "SOLUTIONING_TEAM", "CUSTOMER_APPROVER"] },
-  { label: "All Projects", href: "/projects", icon: <FolderKanban size={18} />, roles: ["PROGRAM_MANAGER", "SOLUTIONING_TEAM", "CUSTOMER_APPROVER"] },
-  { label: "My Requests", href: "/projects", icon: <FolderKanban size={18} />, roles: ["BUSINESS_USER"] },
-  { label: "New Request", href: "/projects/new", icon: <PlusCircle size={18} />, roles: ["BUSINESS_USER"] },
-  { label: "Rate Card", href: "/rate-card", icon: <CreditCard size={18} />, roles: ["BUSINESS_USER", "PROGRAM_MANAGER", "SOLUTIONING_TEAM", "CUSTOMER_APPROVER"] },
-  { label: "User Management", href: "/admin", icon: <Users size={18} />, roles: ["PROGRAM_MANAGER"] },
+  { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["CLIENT", "PMO_LEAD", "PMO_TEAM"] },
+  { label: "All Projects", href: "/projects", icon: <FolderKanban size={18} />, roles: ["PMO_LEAD", "PMO_TEAM"] },
+  { label: "My Requests", href: "/projects", icon: <FolderKanban size={18} />, roles: ["CLIENT"] },
+  { label: "New Request", href: "/projects/new", icon: <PlusCircle size={18} />, roles: ["CLIENT"] },
+  { label: "Rate Card", href: "/rate-card", icon: <CreditCard size={18} />, roles: ["CLIENT", "PMO_LEAD", "PMO_TEAM"] },
+  { label: "User Management", href: "/admin", icon: <Users size={18} />, roles: ["PMO_LEAD"] },
 ];
 
 export function Sidebar({ userRole, userName }: { userRole: string; userName: string }) {
@@ -72,7 +73,7 @@ export function Sidebar({ userRole, userName }: { userRole: string; userName: st
           </div>
           <div className="min-w-0">
             <p className="text-white text-xs font-600 truncate">{userName}</p>
-            <p className="text-white/40 text-[10px] truncate">{userRole.replace(/_/g, " ")}</p>
+            <p className="text-white/40 text-[10px] truncate">{ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] ?? userRole}</p>
           </div>
         </div>
         <button

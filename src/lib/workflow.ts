@@ -12,82 +12,88 @@ export const TRANSITIONS: Transition[] = [
   {
     from: "SUBMITTED",
     to: "UNDER_REVIEW",
-    allowedRoles: ["PROGRAM_MANAGER"],
+    allowedRoles: ["PMO_LEAD"],
     label: "Begin Review",
   },
   {
     from: "UNDER_REVIEW",
     to: "INFO_REQUIRED",
-    allowedRoles: ["PROGRAM_MANAGER"],
+    allowedRoles: ["PMO_LEAD"],
     label: "Request More Info",
     requiresField: "infoRequestMessage",
   },
   {
     from: "UNDER_REVIEW",
     to: "SOLUTIONING",
-    allowedRoles: ["PROGRAM_MANAGER"],
+    allowedRoles: ["PMO_LEAD"],
     label: "Send to Solutioning",
   },
   {
     from: "INFO_REQUIRED",
     to: "UNDER_REVIEW",
-    allowedRoles: ["BUSINESS_USER", "PROGRAM_MANAGER"],
+    allowedRoles: ["CLIENT", "PMO_LEAD"],
     label: "Info Provided — Resume Review",
   },
   {
     from: "SOLUTIONING",
     to: "SOW_DRAFT",
-    allowedRoles: ["SOLUTIONING_TEAM"],
-    label: "Create SOW Draft",
+    allowedRoles: ["PMO_TEAM"],
+    label: "Upload SOW Draft",
   },
   {
     from: "SOW_DRAFT",
     to: "SOW_APPROVAL",
-    allowedRoles: ["PROGRAM_MANAGER", "SOLUTIONING_TEAM"],
-    label: "Send for Customer Approval",
+    allowedRoles: ["PMO_LEAD", "PMO_TEAM"],
+    label: "Send for Client Approval",
   },
   {
     from: "SOW_APPROVAL",
     to: "SOW_SIGNED",
-    allowedRoles: ["CUSTOMER_APPROVER"],
+    allowedRoles: ["CLIENT"],
     label: "Approve & Sign SOW",
-    requiresField: "signedSowPath",
+    requiresField: "signedSowDocumentId",
   },
   {
     from: "SOW_APPROVAL",
     to: "SOW_DRAFT",
-    allowedRoles: ["CUSTOMER_APPROVER", "PROGRAM_MANAGER"],
+    allowedRoles: ["CLIENT", "PMO_LEAD"],
     label: "Reject SOW — Needs Revision",
   },
   {
     from: "SOW_SIGNED",
     to: "PO_REQUESTED",
-    allowedRoles: ["PROGRAM_MANAGER"],
+    allowedRoles: ["PMO_LEAD"],
     label: "Request Purchase Order",
   },
   {
     from: "PO_REQUESTED",
     to: "PO_RECEIVED",
-    allowedRoles: ["CUSTOMER_APPROVER", "PROGRAM_MANAGER"],
+    allowedRoles: ["CLIENT", "PMO_LEAD"],
     label: "Mark PO Received",
     requiresField: "poNumber",
   },
   {
     from: "PO_RECEIVED",
     to: "RESOURCE_ASSIGNED",
-    allowedRoles: ["PROGRAM_MANAGER", "SOLUTIONING_TEAM"],
+    allowedRoles: ["PMO_LEAD", "PMO_TEAM"],
     label: "Assign Resource",
     requiresField: "assignedResourceId",
   },
   {
     from: "RESOURCE_ASSIGNED",
+    to: "HANDED_TO_OPERATIONS",
+    allowedRoles: ["PMO_LEAD"],
+    label: "Hand Over to Operations",
+  },
+  {
+    from: "HANDED_TO_OPERATIONS",
     to: "CLOSED_SUCCESS",
-    allowedRoles: ["PROGRAM_MANAGER"],
+    allowedRoles: ["PMO_LEAD"],
     label: "Close Successfully",
   },
 ];
 
-export const CANCEL_ALLOWED_ROLES: UserRole[] = ["PROGRAM_MANAGER"];
+export const CANCEL_ALLOWED_ROLES: UserRole[] = ["PMO_LEAD"];
 
 export function getAvailableTransitions(
   currentStatus: ProjectStatus,
@@ -109,6 +115,7 @@ export const STATUS_LABELS: Record<ProjectStatus, string> = {
   PO_REQUESTED: "PO Requested",
   PO_RECEIVED: "PO Received",
   RESOURCE_ASSIGNED: "Resource Assigned",
+  HANDED_TO_OPERATIONS: "Handed to Operations",
   CLOSED_SUCCESS: "Closed (Success)",
   CANCELLED: "Cancelled",
 };
@@ -124,6 +131,7 @@ export const STATUS_ORDER: ProjectStatus[] = [
   "PO_REQUESTED",
   "PO_RECEIVED",
   "RESOURCE_ASSIGNED",
+  "HANDED_TO_OPERATIONS",
   "CLOSED_SUCCESS",
   "CANCELLED",
 ];
@@ -139,6 +147,7 @@ export const STATUS_COLORS: Record<ProjectStatus, string> = {
   PO_REQUESTED: "#14b8a6",
   PO_RECEIVED: "#0d9488",
   RESOURCE_ASSIGNED: "#22c55e",
+  HANDED_TO_OPERATIONS: "#16a34a",
   CLOSED_SUCCESS: "#15803d",
   CANCELLED: "#6b7280",
 };

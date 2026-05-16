@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/Card";
 import { SignaturePad } from "@/components/sow/SignaturePad";
 import { FileText, Download, CheckCircle2 } from "lucide-react";
 
-type Project = { id: string; status: string; sowDocumentPath: string | null };
+type DocMeta = { id: string; name: string; type: string };
+type Project = { id: string; status: string; documents?: DocMeta[] };
 
 export function SOWPanel({ project, userRole }: { project: Project; userRole: string }) {
   const router = useRouter();
@@ -14,6 +15,8 @@ export function SOWPanel({ project, userRole }: { project: Project; userRole: st
   const [signing, setSigning] = useState(false);
   const [signed, setSigned] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
+
+  const sowDoc = project.documents?.find((d) => d.type === "SOW_DRAFT");
 
   async function generateSOW() {
     setGenerating(true);
@@ -63,17 +66,17 @@ export function SOWPanel({ project, userRole }: { project: Project; userRole: st
         </div>
       ) : (
         <div className="space-y-3">
-          {/* Solutioning Team: Generate */}
-          {userRole === "SOLUTIONING_TEAM" && project.status === "SOLUTIONING" && (
+          {/* PMO_TEAM: Generate SOW */}
+          {userRole === "PMO_TEAM" && project.status === "SOLUTIONING" && (
             <Button className="w-full" loading={generating} onClick={generateSOW}>
               <FileText size={14} />
               Generate SOW PDF
             </Button>
           )}
 
-          {/* View SOW */}
-          {project.sowDocumentPath && (
-            <a href={`/api/uploads/${project.sowDocumentPath}`} target="_blank" rel="noopener noreferrer">
+          {/* View / Download SOW if stored in DB */}
+          {sowDoc && (
+            <a href={`/api/documents/${sowDoc.id}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" className="w-full">
                 <Download size={14} />
                 Download SOW PDF
@@ -81,15 +84,15 @@ export function SOWPanel({ project, userRole }: { project: Project; userRole: st
             </a>
           )}
 
-          {/* PM: Send for approval */}
-          {["PROGRAM_MANAGER", "SOLUTIONING_TEAM"].includes(userRole) && project.status === "SOW_DRAFT" && project.sowDocumentPath && (
+          {/* PMO Lead/Team: Send for client approval */}
+          {["PMO_LEAD", "PMO_TEAM"].includes(userRole) && project.status === "SOW_DRAFT" && sowDoc && (
             <Button className="w-full" onClick={advanceToApproval}>
-              Send for Customer Approval
+              Send for Client Approval
             </Button>
           )}
 
-          {/* Customer: Sign */}
-          {userRole === "CUSTOMER_APPROVER" && project.status === "SOW_APPROVAL" && (
+          {/* Client: Sign SOW */}
+          {userRole === "CLIENT" && project.status === "SOW_APPROVAL" && (
             <>
               {!showSignature ? (
                 <Button className="w-full" onClick={() => setShowSignature(true)}>

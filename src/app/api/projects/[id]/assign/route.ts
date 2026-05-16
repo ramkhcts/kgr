@@ -7,7 +7,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as { id: string; role: string };
-  if (!["PROGRAM_MANAGER", "SOLUTIONING_TEAM"].includes(user.role)) {
+  if (!["PMO_LEAD", "PMO_TEAM"].includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

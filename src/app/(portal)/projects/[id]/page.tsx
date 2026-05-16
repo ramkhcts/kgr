@@ -5,10 +5,11 @@ import { WorkflowTimeline } from "@/components/projects/WorkflowTimeline";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { RAGBadge } from "@/components/projects/RAGBadge";
 import { ProjectActions } from "./ProjectActions";
+import { CommentsThread } from "@/components/projects/CommentsThread";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
-import { SCOPE_LABELS } from "@/types/enums";
-import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock } from "lucide-react";
+import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS } from "@/types/enums";
+import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download } from "lucide-react";
 import Link from "next/link";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,10 +26,27 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         orderBy: { changedAt: "desc" },
         take: 20,
       },
+      documents: {
+        select: { id: true, name: true, type: true, mimeType: true, size: true, createdAt: true, uploadedBy: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      comments: {
+        include: { user: { select: { id: true, name: true, role: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
   if (!project) notFound();
+
+  // Clients can only view their own projects
+  if (user.role === "CLIENT" && project.submittedById !== user.id) notFound();
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  };
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -41,7 +59,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-xl font-800 text-[#1a1f5e] leading-tight">{project.projectName}</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Project ID: {project.id.slice(0, 8).toUpperCase()}</p>
+              <p className="text-sm text-gray-500 mt-0.5">ID: {project.id.slice(0, 8).toUpperCase()}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <RAGBadge status={project.ragStatus} />
@@ -58,8 +76,9 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Main details */}
+        {/* Main column */}
         <div className="lg:col-span-2 space-y-5">
+          {/* Details */}
           <Card>
             <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Project Details</p>
             <div className="space-y-3">
@@ -75,7 +94,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               )}
               {project.infoRequestMessage && (
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                  <p className="text-xs font-700 text-amber-700 mb-1">Info Requested by KGR PM</p>
+                  <p className="text-xs font-700 text-amber-700 mb-1">Information Requested by KGR PMO</p>
                   <p className="text-sm text-amber-800">{project.infoRequestMessage}</p>
                 </div>
               )}
@@ -88,9 +107,49 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </Card>
 
+          {/* Documents */}
+          <Card>
+            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Documents & Artifacts</p>
+            {project.documents.length === 0 ? (
+              <p className="text-sm text-gray-400 py-2">No documents uploaded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {project.documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-[#e2e4f0] hover:bg-[#f4f5fb] transition-colors">
+                    <FileText size={16} className="text-[#1a1f5e] flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-600 text-gray-800 truncate">{doc.name}</p>
+                      <p className="text-[11px] text-gray-400">
+                        {DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] ?? doc.type}
+                        {" · "}{formatSize(doc.size)}
+                        {" · "}{format(new Date(doc.createdAt), "MMM d, yyyy")}
+                        {doc.uploadedBy && ` · ${doc.uploadedBy.name}`}
+                      </p>
+                    </div>
+                    <a href={`/api/documents/${doc.id}`} target="_blank" rel="noopener noreferrer"
+                       className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[#1a1f5e] hover:text-white text-gray-400 transition-colors">
+                      <Download size={14} />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {/* Comments / Collaboration */}
+          <Card>
+            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Updates & Collaboration</p>
+            <CommentsThread
+              projectId={project.id}
+              comments={project.comments.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() }))}
+              currentUserId={user.id}
+              currentUserRole={user.role}
+            />
+          </Card>
+
           {/* Activity Timeline */}
           <Card>
-            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Activity History</p>
+            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Status History</p>
             <div className="space-y-3">
               {project.statusHistory.map((h) => (
                 <div key={h.id} className="flex gap-3">
@@ -114,7 +173,6 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
         {/* Sidebar */}
         <div className="space-y-4">
-          {/* Meta */}
           <Card>
             <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-3">Project Info</p>
             <div className="space-y-3">
@@ -156,8 +214,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </Card>
 
-          {/* Actions */}
-          <ProjectActions project={project as Parameters<typeof ProjectActions>[0]["project"]} userRole={user.role} userId={user.id} />
+          <ProjectActions
+            project={{ id: project.id, status: project.status, ragStatus: project.ragStatus, documents: project.documents }}
+            userRole={user.role}
+            userId={user.id}
+          />
         </div>
       </div>
     </div>

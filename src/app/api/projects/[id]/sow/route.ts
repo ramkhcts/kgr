@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateSOWPDF } from "@/lib/pdf-generator";
-import { saveFile } from "@/lib/upload";
 
 export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as { id: string; role: string };
-  if (!["SOLUTIONING_TEAM", "PROGRAM_MANAGER"].includes(user.role)) {
+  if (!["PMO_TEAM", "PMO_LEAD"].includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -32,19 +31,28 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       rateCardEntries
     );
 
-    const filename = `sow-${id}.pdf`;
-    saveFile(filename, pdfBuffer);
+    const doc = await prisma.document.create({
+      data: {
+        projectId: id,
+        name: `SOW - ${project.projectName}.pdf`,
+        type: "SOW_DRAFT",
+        mimeType: "application/pdf",
+        size: pdfBuffer.length,
+        content: pdfBuffer,
+        uploadedById: user.id,
+      },
+    });
 
     const updated = await prisma.project.update({
       where: { id },
-      data: { sowDocumentPath: filename, status: "SOW_DRAFT" },
+      data: { status: "SOW_DRAFT" },
     });
 
     await prisma.statusHistory.create({
       data: { projectId: id, fromStatus: project.status, toStatus: "SOW_DRAFT", changedById: user.id, notes: "SOW PDF generated" },
     });
 
-    return NextResponse.json({ ...updated, filename });
+    return NextResponse.json({ ...updated, documentId: doc.id });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: "Failed to generate SOW" }, { status: 500 });

@@ -5,7 +5,7 @@ import { ArrowLeft, FileText } from "lucide-react";
 import Link from "next/link";
 
 export default async function NewProjectPage() {
-  await requireAuth(["BUSINESS_USER", "PROGRAM_MANAGER"]);
+  await requireAuth(["CLIENT", "PMO_LEAD"]);
 
   return (
     <div className="max-w-3xl mx-auto">

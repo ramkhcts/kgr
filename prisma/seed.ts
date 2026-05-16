@@ -19,41 +19,43 @@ async function main() {
 
   const hash = await bcrypt.hash("kgr2024!", 10);
 
-  // Users
+  // KGR internal team
   const alice = await prisma.user.upsert({
     where: { email: "alice@kgr.com" },
-    update: {},
-    create: { email: "alice@kgr.com", name: "Alice Johnson", passwordHash: hash, role: "PROGRAM_MANAGER" },
+    update: { role: "PMO_LEAD" },
+    create: { email: "alice@kgr.com", name: "Alice Johnson", passwordHash: hash, role: "PMO_LEAD" },
   });
   const bob = await prisma.user.upsert({
     where: { email: "bob@kgr.com" },
-    update: {},
-    create: { email: "bob@kgr.com", name: "Bob Chen", passwordHash: hash, role: "SOLUTIONING_TEAM" },
+    update: { role: "PMO_TEAM" },
+    create: { email: "bob@kgr.com", name: "Bob Chen", passwordHash: hash, role: "PMO_TEAM" },
   });
   const carol = await prisma.user.upsert({
     where: { email: "carol@kgr.com" },
-    update: {},
-    create: { email: "carol@kgr.com", name: "Carol White", passwordHash: hash, role: "SOLUTIONING_TEAM" },
+    update: { role: "PMO_TEAM" },
+    create: { email: "carol@kgr.com", name: "Carol White", passwordHash: hash, role: "PMO_TEAM" },
   });
+
+  // KarthikLLC clients — single CLIENT role covers request submission + SOW signing + PO upload
   const david = await prisma.user.upsert({
     where: { email: "david@karthikllc.com" },
-    update: {},
-    create: { email: "david@karthikllc.com", name: "David Park", passwordHash: hash, role: "BUSINESS_USER" },
+    update: { role: "CLIENT" },
+    create: { email: "david@karthikllc.com", name: "David Park", passwordHash: hash, role: "CLIENT" },
   });
   const emma = await prisma.user.upsert({
     where: { email: "emma@karthikllc.com" },
-    update: {},
-    create: { email: "emma@karthikllc.com", name: "Emma Torres", passwordHash: hash, role: "BUSINESS_USER" },
+    update: { role: "CLIENT" },
+    create: { email: "emma@karthikllc.com", name: "Emma Torres", passwordHash: hash, role: "CLIENT" },
   });
   const frank = await prisma.user.upsert({
     where: { email: "frank@karthikllc.com" },
-    update: {},
-    create: { email: "frank@karthikllc.com", name: "Frank Miller", passwordHash: hash, role: "CUSTOMER_APPROVER" },
+    update: { role: "CLIENT" },
+    create: { email: "frank@karthikllc.com", name: "Frank Miller", passwordHash: hash, role: "CLIENT" },
   });
   const grace = await prisma.user.upsert({
     where: { email: "grace@karthikllc.com" },
-    update: {},
-    create: { email: "grace@karthikllc.com", name: "Grace Lee", passwordHash: hash, role: "CUSTOMER_APPROVER" },
+    update: { role: "CLIENT" },
+    create: { email: "grace@karthikllc.com", name: "Grace Lee", passwordHash: hash, role: "CLIENT" },
   });
 
   console.log("✅ Users created");
@@ -65,7 +67,13 @@ async function main() {
   });
   console.log("✅ Rate card seeded");
 
-  // 10 Sample Projects
+  // Clean up existing data
+  await prisma.comment.deleteMany();
+  await prisma.document.deleteMany();
+  await prisma.auditLog.deleteMany();
+  await prisma.statusHistory.deleteMany();
+  await prisma.project.deleteMany();
+
   const projectsData = [
     {
       projectName: "Dallas HQ Desk Refresh",
@@ -125,6 +133,7 @@ async function main() {
       status: "PO_REQUESTED",
       ragStatus: "GREEN",
       estimatedCost: 176400,
+      submittedById: frank.id,
     },
     {
       projectName: "Seattle SOW Signature Pending",
@@ -194,7 +203,7 @@ async function main() {
       status: "UNDER_REVIEW",
       ragStatus: "GREEN",
       estimatedCost: 273600,
-      submittedById: emma.id,
+      submittedById: grace.id,
     },
     {
       projectName: "Portland Emergency RCC",
@@ -208,14 +217,9 @@ async function main() {
       status: "SUBMITTED",
       ragStatus: "AMBER",
       estimatedCost: 184320,
-      submittedById: david.id,
+      submittedById: frank.id,
     },
   ];
-
-  // Clean up existing projects and history for idempotent seeding
-  await prisma.auditLog.deleteMany();
-  await prisma.statusHistory.deleteMany();
-  await prisma.project.deleteMany();
 
   for (const pd of projectsData) {
     const project = await prisma.project.create({
@@ -231,14 +235,14 @@ async function main() {
         status: pd.status,
         ragStatus: pd.ragStatus,
         estimatedCost: pd.estimatedCost || null,
-        submittedById: pd.submittedById || david.id,
+        submittedById: pd.submittedById,
         assignedResourceId: (pd as { assignedResourceId?: string }).assignedResourceId || null,
         poNumber: (pd as { poNumber?: string }).poNumber || null,
         infoRequestMessage: (pd as { infoRequestMessage?: string }).infoRequestMessage || null,
       },
     });
 
-    // Create status history trail
+    // Status history trail
     const statusTrail: string[] = ["SUBMITTED"];
     const STATUS_ORDER = [
       "SUBMITTED", "UNDER_REVIEW", "SOLUTIONING", "SOW_DRAFT",
@@ -246,9 +250,7 @@ async function main() {
       "RESOURCE_ASSIGNED", "CLOSED_SUCCESS",
     ];
     const currentIdx = STATUS_ORDER.indexOf(pd.status);
-    for (let i = 1; i <= currentIdx; i++) {
-      statusTrail.push(STATUS_ORDER[i]);
-    }
+    for (let i = 1; i <= currentIdx; i++) statusTrail.push(STATUS_ORDER[i]);
     if (pd.status === "INFO_REQUIRED") statusTrail.push("UNDER_REVIEW", "INFO_REQUIRED");
     if (pd.status === "UNDER_REVIEW") statusTrail.push("UNDER_REVIEW");
 
@@ -263,14 +265,37 @@ async function main() {
         },
       });
     }
+
+    // Seed a sample comment for a few projects to show collaboration
+    if (["SOLUTIONING", "SOW_DRAFT", "SOW_APPROVAL", "PO_RECEIVED"].includes(pd.status)) {
+      await prisma.comment.create({
+        data: {
+          projectId: project.id,
+          userId: alice.id,
+          content: `Project is progressing well. Current status: ${pd.status.replace(/_/g, " ")}. Team is on track.`,
+        },
+      });
+    }
+    if (pd.status === "INFO_REQUIRED") {
+      await prisma.comment.create({
+        data: {
+          projectId: project.id,
+          userId: pd.submittedById,
+          content: "Hi, I will gather the information requested and revert by end of week.",
+        },
+      });
+    }
   }
 
   console.log("✅ 10 sample projects seeded");
-  console.log("\n🎉 Seed complete! Login credentials:");
-  console.log("   alice@kgr.com / kgr2024! — Program Manager");
-  console.log("   bob@kgr.com / kgr2024! — Solutioning Team");
-  console.log("   david@karthikllc.com / kgr2024! — Business User");
-  console.log("   frank@karthikllc.com / kgr2024! — Customer Approver");
+  console.log("\n🎉 Seed complete! Login credentials (password: kgr2024! for all):");
+  console.log("   alice@kgr.com         — PMO Lead");
+  console.log("   bob@kgr.com           — PMO Team");
+  console.log("   carol@kgr.com         — PMO Team");
+  console.log("   david@karthikllc.com  — Client");
+  console.log("   emma@karthikllc.com   — Client");
+  console.log("   frank@karthikllc.com  — Client");
+  console.log("   grace@karthikllc.com  — Client");
 }
 
 main()

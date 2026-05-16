@@ -1,8 +1,7 @@
 export const UserRole = {
-  BUSINESS_USER: "BUSINESS_USER",
-  PROGRAM_MANAGER: "PROGRAM_MANAGER",
-  SOLUTIONING_TEAM: "SOLUTIONING_TEAM",
-  CUSTOMER_APPROVER: "CUSTOMER_APPROVER",
+  CLIENT: "CLIENT",
+  PMO_LEAD: "PMO_LEAD",
+  PMO_TEAM: "PMO_TEAM",
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
@@ -17,6 +16,7 @@ export const ProjectStatus = {
   PO_REQUESTED: "PO_REQUESTED",
   PO_RECEIVED: "PO_RECEIVED",
   RESOURCE_ASSIGNED: "RESOURCE_ASSIGNED",
+  HANDED_TO_OPERATIONS: "HANDED_TO_OPERATIONS",
   CLOSED_SUCCESS: "CLOSED_SUCCESS",
   CANCELLED: "CANCELLED",
 } as const;
@@ -37,9 +37,34 @@ export const RAGStatus = {
 } as const;
 export type RAGStatus = (typeof RAGStatus)[keyof typeof RAGStatus];
 
+export const DocumentType = {
+  SOW_DRAFT: "SOW_DRAFT",
+  SIGNED_SOW: "SIGNED_SOW",
+  STAFFING_ORDER: "STAFFING_ORDER",
+  PO: "PO",
+  COMMERCIAL: "COMMERCIAL",
+  OTHER: "OTHER",
+} as const;
+export type DocumentType = (typeof DocumentType)[keyof typeof DocumentType];
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  SOW_DRAFT: "SOW Draft",
+  SIGNED_SOW: "Signed SOW",
+  STAFFING_ORDER: "Staffing Order",
+  PO: "Purchase Order",
+  COMMERCIAL: "Commercial",
+  OTHER: "Other",
+};
+
 export const SCOPE_LABELS: Record<ScopeOfWork, string> = {
   SITE_SUPPORT_SERVICES: "Site Support Services",
   SERVICE_DESK: "Service Desk",
   REMOTE_COMMAND_CENTER: "Remote Command Center",
   FIELD_SERVICES: "Field Services",
+};
+
+export const ROLE_LABELS: Record<UserRole, string> = {
+  CLIENT: "Client",
+  PMO_LEAD: "PMO Lead",
+  PMO_TEAM: "PMO Team",
 };

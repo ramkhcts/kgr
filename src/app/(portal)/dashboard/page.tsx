@@ -19,15 +19,9 @@ export default async function DashboardPage() {
 
   // Fetch all projects visible to this user
   let projects;
-  if (user.role === "BUSINESS_USER") {
+  if (user.role === "CLIENT") {
     projects = await prisma.project.findMany({
       where: { submittedById: user.id },
-      include: { submittedBy: { select: { name: true } }, assignedResource: { select: { name: true } } },
-      orderBy: { updatedAt: "desc" },
-    });
-  } else if (user.role === "CUSTOMER_APPROVER") {
-    projects = await prisma.project.findMany({
-      where: { status: { in: ["SOW_APPROVAL", "SOW_SIGNED", "PO_REQUESTED", "PO_RECEIVED", "RESOURCE_ASSIGNED", "CLOSED_SUCCESS"] } },
       include: { submittedBy: { select: { name: true } }, assignedResource: { select: { name: true } } },
       orderBy: { updatedAt: "desc" },
     });
@@ -47,10 +41,9 @@ export default async function DashboardPage() {
 
   // Determine "needs action" based on role
   const needsActionStatuses: Partial<Record<UserRole, ProjectStatus[]>> = {
-    PROGRAM_MANAGER: ["SUBMITTED", "INFO_REQUIRED", "SOW_SIGNED"],
-    SOLUTIONING_TEAM: ["SOLUTIONING", "SOW_DRAFT"],
-    CUSTOMER_APPROVER: ["SOW_APPROVAL", "PO_REQUESTED"],
-    BUSINESS_USER: ["INFO_REQUIRED"],
+    PMO_LEAD: ["SUBMITTED", "INFO_REQUIRED", "SOW_SIGNED", "RESOURCE_ASSIGNED"],
+    PMO_TEAM: ["SOLUTIONING", "SOW_DRAFT"],
+    CLIENT: ["INFO_REQUIRED", "SOW_APPROVAL", "PO_REQUESTED"],
   };
   const myActionStatuses = needsActionStatuses[user.role as UserRole] ?? [];
   const needsAction = projects.filter((p) => myActionStatuses.includes(p.status as ProjectStatus)).length;
@@ -81,10 +74,9 @@ export default async function DashboardPage() {
   });
 
   const roleLabel: Record<string, string> = {
-    BUSINESS_USER: "Business User",
-    PROGRAM_MANAGER: "Program Manager",
-    SOLUTIONING_TEAM: "Solutioning Team",
-    CUSTOMER_APPROVER: "Customer Approver",
+    CLIENT: "Client",
+    PMO_LEAD: "PMO Lead",
+    PMO_TEAM: "PMO Team",
   };
 
   return (

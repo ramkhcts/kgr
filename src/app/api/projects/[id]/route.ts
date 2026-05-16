@@ -16,6 +16,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         include: { changedBy: { select: { id: true, name: true } } },
         orderBy: { changedAt: "desc" },
       },
+      documents: {
+        select: { id: true, name: true, type: true, mimeType: true, size: true, createdAt: true, uploadedBy: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+      comments: {
+        include: { user: { select: { id: true, name: true, role: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 

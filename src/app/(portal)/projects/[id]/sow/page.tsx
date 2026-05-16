@@ -9,15 +9,27 @@ import { ArrowLeft, FileText } from "lucide-react";
 import Link from "next/link";
 
 export default async function SOWPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireAuth(["PROGRAM_MANAGER", "SOLUTIONING_TEAM", "CUSTOMER_APPROVER"]);
+  const user = await requireAuth(["PMO_LEAD", "PMO_TEAM", "CLIENT"]);
   const { id } = await params;
 
   const project = await prisma.project.findUnique({
     where: { id },
-    include: { submittedBy: { select: { name: true, email: true } }, assignedResource: { select: { name: true } } },
+    include: {
+      submittedBy: { select: { name: true, email: true } },
+      assignedResource: { select: { name: true } },
+      documents: {
+        where: { type: "SOW_DRAFT" },
+        select: { id: true, name: true, type: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
   });
 
   if (!project) notFound();
+
+  // Clients only see their own
+  if (user.role === "CLIENT" && project.submittedById !== user.id) notFound();
 
   const rateCardEntries = await prisma.rateCard.findMany({
     where: { serviceType: project.scopeOfWork, isActive: true },
@@ -43,7 +55,6 @@ export default async function SOWPage({ params }: { params: Promise<{ id: string
           <p className="text-sm font-700 text-[#1a1f5e]">SOW Preview</p>
         </div>
         <div className="space-y-4 text-sm">
-          {/* Header */}
           <div className="rounded-xl p-4" style={{ background: "linear-gradient(135deg, #1a1f5e, #3d2d8e)" }}>
             <p className="text-[#d4a017] font-800 text-base">KGR End User Services</p>
             <p className="text-white/70 text-xs">Statement of Work · Customer: KarthikLLC</p>
@@ -100,8 +111,7 @@ export default async function SOWPage({ params }: { params: Promise<{ id: string
         </div>
       </Card>
 
-      {/* Actions panel */}
-      <SOWPanel project={{ id: project.id, status: project.status, sowDocumentPath: project.sowDocumentPath }} userRole={user.role} />
+      <SOWPanel project={{ id: project.id, status: project.status, documents: project.documents }} userRole={user.role} />
     </div>
   );
 }

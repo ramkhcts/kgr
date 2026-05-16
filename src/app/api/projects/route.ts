@@ -9,21 +9,25 @@ export async function GET() {
   const user = session.user as { id: string; role: string };
 
   let projects;
-  if (user.role === "BUSINESS_USER") {
+  if (user.role === "CLIENT") {
+    // Clients see only their own requests
     projects = await prisma.project.findMany({
       where: { submittedById: user.id },
-      include: { submittedBy: { select: { id: true, name: true, email: true } }, assignedResource: { select: { id: true, name: true } } },
-      orderBy: { updatedAt: "desc" },
-    });
-  } else if (user.role === "CUSTOMER_APPROVER") {
-    projects = await prisma.project.findMany({
-      where: { status: { in: ["SOW_APPROVAL", "SOW_SIGNED", "PO_REQUESTED", "PO_RECEIVED", "RESOURCE_ASSIGNED", "CLOSED_SUCCESS"] } },
-      include: { submittedBy: { select: { id: true, name: true, email: true } }, assignedResource: { select: { id: true, name: true } } },
+      include: {
+        submittedBy: { select: { id: true, name: true, email: true } },
+        assignedResource: { select: { id: true, name: true } },
+        documents: { select: { id: true, name: true, type: true, createdAt: true }, orderBy: { createdAt: "desc" } },
+      },
       orderBy: { updatedAt: "desc" },
     });
   } else {
+    // PMO_LEAD and PMO_TEAM see all projects
     projects = await prisma.project.findMany({
-      include: { submittedBy: { select: { id: true, name: true, email: true } }, assignedResource: { select: { id: true, name: true } } },
+      include: {
+        submittedBy: { select: { id: true, name: true, email: true } },
+        assignedResource: { select: { id: true, name: true } },
+        documents: { select: { id: true, name: true, type: true, createdAt: true }, orderBy: { createdAt: "desc" } },
+      },
       orderBy: { updatedAt: "desc" },
     });
   }
@@ -36,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const user = session.user as { id: string; role: string };
-  if (user.role !== "BUSINESS_USER" && user.role !== "PROGRAM_MANAGER") {
+  if (!["CLIENT", "PMO_LEAD"].includes(user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

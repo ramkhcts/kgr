@@ -1,14 +1,8 @@
 import { Bell } from "lucide-react";
 import { KarthikLLCLogo } from "./KarthikLLCLogo";
+import { ROLE_LABELS } from "@/types/enums";
 
 export function Topbar({ userName, userRole }: { userName: string; userRole: string }) {
-  const roleLabels: Record<string, string> = {
-    BUSINESS_USER: "Business User",
-    PROGRAM_MANAGER: "Program Manager",
-    SOLUTIONING_TEAM: "Solutioning Team",
-    CUSTOMER_APPROVER: "Customer Approver",
-  };
-
   return (
     <header className="h-14 bg-white border-b border-[#e2e4f0] flex items-center justify-between px-6 flex-shrink-0">
       <div>
@@ -22,7 +16,7 @@ export function Topbar({ userName, userRole }: { userName: string; userRole: str
           <KarthikLLCLogo size={28} />
           <div className="text-right">
             <p className="text-sm font-600 text-[#1a1f5e] leading-tight">{userName}</p>
-            <p className="text-[11px] text-gray-500 leading-tight">{roleLabels[userRole] ?? userRole}</p>
+            <p className="text-[11px] text-gray-500 leading-tight">{ROLE_LABELS[userRole as keyof typeof ROLE_LABELS] ?? userRole}</p>
           </div>
         </div>
       </div>
