@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { Notifications } from "@/lib/email";
+import { SCOPE_LABELS } from "@/types/enums";
 
 export async function GET() {
   const session = await auth();
@@ -67,6 +69,22 @@ export async function POST(req: NextRequest) {
     await prisma.statusHistory.create({
       data: { projectId: project.id, toStatus: "SUBMITTED", changedById: user.id },
     });
+
+    // Email all PMO Leads
+    const pmoLeads = await prisma.user.findMany({
+      where: { role: "PMO_LEAD" },
+      select: { email: true },
+    });
+    if (pmoLeads.length > 0) {
+      Notifications.newRequestSubmitted({
+        pmoEmails: pmoLeads.map((u) => u.email),
+        projectName: project.projectName,
+        submittedBy: (project as unknown as { submittedBy?: { name: string } }).submittedBy?.name ?? user.id,
+        scope: SCOPE_LABELS[body.scopeOfWork as keyof typeof SCOPE_LABELS] ?? body.scopeOfWork,
+        location: body.location,
+        projectId: project.id,
+      }).catch((err) => console.error("[EMAIL ERROR]", err));
+    }
 
     return NextResponse.json(project, { status: 201 });
   } catch (err) {

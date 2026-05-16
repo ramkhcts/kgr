@@ -18,7 +18,7 @@ const schema = z.object({
   location: z.string().min(2, "Please specify the location"),
   anticipatedStartDate: z.string().min(1, "Start date is required"),
   anticipatedEndDate: z.string().min(1, "End date is required"),
-  budgetAvailable: z.boolean(),
+  budgetAvailable: z.union([z.boolean(), z.string()]).transform(v => v === true || v === "true"),
   notes: z.string().optional(),
 });
 
