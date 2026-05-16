@@ -9,7 +9,7 @@ import { ArrowLeft, FileText } from "lucide-react";
 import Link from "next/link";
 
 export default async function SOWPage({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireAuth(["PMO_LEAD", "PMO_TEAM", "CLIENT"]);
+  const user = await requireAuth(["PMO_LEAD", "PMO_TEAM", "CLIENT", "SUPER_ADMIN"]);
   const { id } = await params;
 
   const project = await prisma.project.findUnique({
