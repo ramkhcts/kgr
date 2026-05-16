@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   // UserRole: BUSINESS_USER | PROGRAM_MANAGER | SOLUTIONING_TEAM | CUSTOMER_APPROVER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  submittedProjects Project[]       @relation("Submitter")
+  assignedProjects  Project[]       @relation("AssignedResource")
+  auditLogs         AuditLog[]
+  statusChanges     StatusHistory[]
+}
+
+model Project {
+  id                   String   @id @default(cuid())
+  projectName          String
+  description          String
+  scopeOfWork          String   // ScopeOfWork: SITE_SUPPORT_SERVICES | SERVICE_DESK | REMOTE_COMMAND_CENTER | FIELD_SERVICES
+  location             String
+  anticipatedStartDate DateTime
+  anticipatedEndDate   DateTime
+  budgetAvailable      Boolean
+  notes                String?
+  status               String   @default("SUBMITTED")   // ProjectStatus
+  ragStatus            String   @default("GREEN")        // RAGStatus: RED | AMBER | GREEN
+  estimatedCost        Float?
+  cancelledReason      String?
+  infoRequestMessage   String?
+  sowNotes             String?
+  poNumber             String?
+  sowDocumentPath      String?
+  signedSowPath        String?
+  signatureDataUrl     String?
+  poDocumentPath       String?
+
+  submittedById      String
+  submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])
+  assignedResourceId String?
+  assignedResource   User?   @relation("AssignedResource", fields: [assignedResourceId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  statusHistory StatusHistory[]
+  auditLogs     AuditLog[]
+}
+
+model StatusHistory {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  fromStatus  String?
+  toStatus    String
+  changedAt   DateTime @default(now())
+  changedById String?
+  changedBy   User?    @relation(fields: [changedById], references: [id])
+  notes       String?
+}
+
+model RateCard {
+  id            String   @id @default(cuid())
+  serviceType   String   // ScopeOfWork
+  roleName      String
+  hourlyRate    Float
+  dailyRate     Float
+  currency      String   @default("USD")
+  effectiveDate DateTime @default(now())
+  isActive      Boolean  @default(true)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
