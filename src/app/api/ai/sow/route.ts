@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { askClaude, AI_ENABLED } from "@/lib/ai";
+import { askClaude } from "@/lib/ai";
+import { isAIActive } from "@/lib/ai-settings";
 
 const SCOPE_LABELS: Record<string, string> = {
   SITE_SUPPORT_SERVICES: "Site Support Services",
@@ -19,7 +20,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (!AI_ENABLED) {
+  if (!isAIActive()) {
     return NextResponse.json({ enabled: false, error: "AI not configured" }, { status: 503 });
   }
 

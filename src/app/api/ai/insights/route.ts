@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { askClaude, AI_ENABLED } from "@/lib/ai";
+import { askClaude } from "@/lib/ai";
+import { isAIActive } from "@/lib/ai-settings";
 import { ROLE_LABELS } from "@/types/enums";
 
 const SCOPE_LABELS: Record<string, string> = {
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
   const projectId = searchParams.get("projectId");
   if (!projectId) return NextResponse.json({ error: "projectId required" }, { status: 400 });
 
-  if (!AI_ENABLED) {
+  if (!isAIActive()) {
     return NextResponse.json({ enabled: false });
   }
 
