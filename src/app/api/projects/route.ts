@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
         budgetAvailable: body.budgetAvailable,
         notes: body.notes || null,
         estimatedCost: body.estimatedCost || null,
+        customFields: body.customFields ? body.customFields : null,
         submittedById: user.id,
         status: "SUBMITTED",
         ragStatus: "GREEN",

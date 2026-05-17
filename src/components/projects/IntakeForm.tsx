@@ -3,13 +3,26 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { CostEstimator } from "./CostEstimator";
 import { AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+
+interface CustomFormField {
+  id: string;
+  fieldKey: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options: string | null;
+  placeholder: string | null;
+  hint: string | null;
+  isCore: boolean;
+  isActive: boolean;
+}
 
 const schema = z.object({
   projectName: z.string().min(3, "Project name must be at least 3 characters"),
@@ -38,6 +51,18 @@ export function IntakeForm() {
   const [success, setSuccess] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
   const [enhanceError, setEnhanceError] = useState("");
+  const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
+
+  useEffect(() => {
+    fetch("/api/form-config")
+      .then((r) => r.json())
+      .then((data: CustomFormField[]) => {
+        const nonCore = data.filter((f) => !f.isCore && f.isActive);
+        setCustomFields(nonCore);
+      })
+      .catch(() => { /* non-critical */ });
+  }, []);
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -80,7 +105,12 @@ export function IntakeForm() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          customFields: Object.keys(customFieldValues).length > 0
+            ? JSON.stringify(customFieldValues)
+            : undefined,
+        }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -221,6 +251,88 @@ export function IntakeForm() {
             {...register("notes")}
           />
         </div>
+
+        {/* Dynamic custom fields */}
+        {customFields.map((field) => {
+          const value = customFieldValues[field.fieldKey];
+          const strValue = value !== undefined && value !== null ? String(value) : "";
+          const parseOpts = (raw: string | null): string[] => {
+            if (!raw) return [];
+            try { return JSON.parse(raw); } catch { return []; }
+          };
+
+          if (field.type === "checkbox") {
+            return (
+              <div key={field.fieldKey} className="md:col-span-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!value}
+                    onChange={(e) =>
+                      setCustomFieldValues((prev) => ({ ...prev, [field.fieldKey]: e.target.checked }))
+                    }
+                    className="accent-[#1a1f5e] w-4 h-4"
+                  />
+                  <span className="text-sm font-600 text-[#1a1f5e]">
+                    {field.label}{field.required && " *"}
+                  </span>
+                </label>
+                {field.hint && <p className="text-xs text-gray-500 mt-0.5 ml-6">{field.hint}</p>}
+              </div>
+            );
+          }
+
+          if (field.type === "textarea") {
+            return (
+              <div key={field.fieldKey} className="md:col-span-2">
+                <Textarea
+                  label={`${field.label}${field.required ? " *" : ""}`}
+                  placeholder={field.placeholder ?? undefined}
+                  hint={field.hint ?? undefined}
+                  value={strValue}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setCustomFieldValues((prev) => ({ ...prev, [field.fieldKey]: e.target.value }))
+                  }
+                  rows={3}
+                />
+              </div>
+            );
+          }
+
+          if (field.type === "dropdown") {
+            const opts = parseOpts(field.options);
+            return (
+              <div key={field.fieldKey}>
+                <Select
+                  label={`${field.label}${field.required ? " *" : ""}`}
+                  placeholder={field.placeholder ?? "Select..."}
+                  hint={field.hint ?? undefined}
+                  options={opts.map((o) => ({ value: o, label: o }))}
+                  value={strValue}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setCustomFieldValues((prev) => ({ ...prev, [field.fieldKey]: e.target.value }))
+                  }
+                />
+              </div>
+            );
+          }
+
+          // text | number | date
+          return (
+            <div key={field.fieldKey}>
+              <Input
+                label={`${field.label}${field.required ? " *" : ""}`}
+                type={field.type === "number" ? "number" : field.type === "date" ? "date" : "text"}
+                placeholder={field.placeholder ?? undefined}
+                hint={field.hint ?? undefined}
+                value={strValue}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setCustomFieldValues((prev) => ({ ...prev, [field.fieldKey]: e.target.value }))
+                }
+              />
+            </div>
+          );
+        })}
       </div>
 
       {/* Live cost estimate */}

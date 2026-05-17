@@ -44,6 +44,7 @@ model Project {
   poNumber             String?
   closureNotes         String?
   region               String   @default("NA")           // Region: NA | EMEA | LATAM | ASPAC
+  customFields         String?  // JSON blob for dynamic field values
 
   submittedById      String
   submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])
@@ -117,4 +118,21 @@ model AuditLog {
   action    String
   details   String?
   createdAt DateTime @default(now())
+}
+
+model FormField {
+  id          String   @id @default(cuid())
+  fieldKey    String   @unique
+  label       String
+  type        String   // text | number | dropdown | textarea | checkbox
+  required    Boolean  @default(false)
+  options     String?  // JSON: ["Option A","Option B"] for dropdown type
+  placeholder String?
+  hint        String?
+  section     String   @default("details")
+  sortOrder   Int      @default(100)
+  isActive    Boolean  @default(true)
+  isCore      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
