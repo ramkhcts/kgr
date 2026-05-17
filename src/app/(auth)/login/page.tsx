@@ -39,9 +39,7 @@ export default function LoginPage() {
           <p className="text-center text-xs text-gray-500">
             KGR End User Services · Powered by iDemand v1.0
           </p>
-          <p className="text-center text-[10px] text-gray-400 mt-1">
-            Demo credentials: alice@kgr.com / kgr2024!
-          </p>
+
         </div>
       </div>
     </div>
