@@ -12,6 +12,7 @@ import { format } from "date-fns";
 import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS } from "@/types/enums";
 import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download } from "lucide-react";
 import Link from "next/link";
+import { AIInsightsPanel } from "@/components/projects/AIInsightsPanel";
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireAuth();
@@ -235,6 +236,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 closureNotes: (project as unknown as { closureNotes?: string | null }).closureNotes,
               }}
               userRole={user.role}
+            />
+          )}
+
+          {/* AI Insights — shown to all roles if project is not closed/cancelled */}
+          {!["CLOSED_SUCCESS", "CANCELLED"].includes(project.status) && (
+            <AIInsightsPanel
+              projectId={project.id}
+              userRole={user.role}
+              projectStatus={project.status}
             />
           )}
         </div>

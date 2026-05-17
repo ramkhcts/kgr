@@ -9,7 +9,7 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { CostEstimator } from "./CostEstimator";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
 
 const schema = z.object({
   projectName: z.string().min(3, "Project name must be at least 3 characters"),
@@ -36,16 +36,43 @@ export function IntakeForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhanceError, setEnhanceError] = useState("");
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { budgetAvailable: true, region: "NA" },
   });
 
-  const scopeOfWork = watch("scopeOfWork");
-  const startDate = watch("anticipatedStartDate");
-  const endDate = watch("anticipatedEndDate");
-  const region = watch("region");
+  const scopeOfWork    = watch("scopeOfWork");
+  const startDate      = watch("anticipatedStartDate");
+  const endDate        = watch("anticipatedEndDate");
+  const region         = watch("region");
+  const description    = watch("description");
+  const projectName    = watch("projectName");
+
+  async function enhanceDescription() {
+    if (!description || description.trim().length < 10) return;
+    setEnhancing(true);
+    setEnhanceError("");
+    try {
+      const res = await fetch("/api/ai/enhance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ description, projectName, scopeOfWork }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.enhanced) {
+        setEnhanceError(data.error ?? "AI enhancement failed");
+        return;
+      }
+      setValue("description", data.enhanced, { shouldValidate: true });
+    } catch {
+      setEnhanceError("Failed to connect to AI service");
+    } finally {
+      setEnhancing(false);
+    }
+  }
 
   async function onSubmit(data: FormData) {
     setError("");
@@ -97,14 +124,35 @@ export function IntakeForm() {
           />
         </div>
 
+        {/* Description with AI Enhance button */}
         <div className="md:col-span-2">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-sm font-600 text-[#1a1f5e]">Project Description *</label>
+            <button
+              type="button"
+              onClick={enhanceDescription}
+              disabled={!description || description.trim().length < 10 || enhancing}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-600 text-[#3d2d8e] bg-[#3d2d8e]/8 hover:bg-[#3d2d8e]/15 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+              title="Use AI to make your description more professional and complete"
+            >
+              <Sparkles size={11} className={enhancing ? "animate-spin" : ""} />
+              {enhancing ? "Enhancing..." : "✨ Enhance with AI"}
+            </button>
+          </div>
           <Textarea
-            label="Project Description *"
             placeholder="Provide a detailed description of the project requirements..."
             rows={3}
             error={errors.description?.message}
             {...register("description")}
           />
+          {enhanceError && (
+            <p className="text-xs text-amber-600 mt-1">{enhanceError}</p>
+          )}
+          {!enhanceError && (
+            <p className="text-[10px] text-gray-400 mt-1">
+              Tip: click ✨ Enhance to let AI expand and professionalise your description
+            </p>
+          )}
         </div>
 
         <Select
