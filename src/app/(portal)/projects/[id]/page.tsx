@@ -9,8 +9,8 @@ import { EditProjectModal } from "./EditProjectModal";
 import { CommentsThread } from "@/components/projects/CommentsThread";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
-import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS } from "@/types/enums";
-import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download } from "lucide-react";
+import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS } from "@/types/enums";
+import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download, AlertTriangle, Users } from "lucide-react";
 import Link from "next/link";
 import { AIInsightsPanel } from "@/components/projects/AIInsightsPanel";
 
@@ -109,6 +109,55 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </Card>
 
+          {/* Business Context card — only show if at least one field is set */}
+          {(() => {
+            const p = project as unknown as {
+              requestingDepartment?: string | null;
+              businessOwner?: string | null;
+              businessJustification?: string | null;
+              incumbentVendor?: string | null;
+              complianceNotes?: string | null;
+            };
+            if (!p.requestingDepartment && !p.businessOwner && !p.businessJustification && !p.incumbentVendor && !p.complianceNotes) return null;
+            return (
+              <Card>
+                <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Business Context</p>
+                <div className="space-y-3">
+                  {p.requestingDepartment && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Requesting Department</p>
+                      <p className="text-sm text-gray-800">{p.requestingDepartment}</p>
+                    </div>
+                  )}
+                  {p.businessOwner && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Business Owner / Sponsor</p>
+                      <p className="text-sm text-gray-800">{p.businessOwner}</p>
+                    </div>
+                  )}
+                  {p.businessJustification && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Business Justification</p>
+                      <p className="text-sm text-gray-800">{p.businessJustification}</p>
+                    </div>
+                  )}
+                  {p.incumbentVendor && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Incumbent Vendor</p>
+                      <p className="text-sm text-gray-800">{p.incumbentVendor}</p>
+                    </div>
+                  )}
+                  {p.complianceNotes && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Compliance Requirements</p>
+                      <p className="text-sm text-gray-800">{p.complianceNotes}</p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            );
+          })()}
+
           {/* Documents */}
           <Card>
             <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Documents & Artifacts</p>
@@ -195,6 +244,58 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   </div>
                 </div>
               ))}
+              {/* Priority */}
+              <div className="flex items-start gap-2">
+                <span className="text-gray-400 mt-0.5 flex-shrink-0"><AlertTriangle size={14} /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-400">Priority</p>
+                  <p className="text-sm font-500 truncate" style={{ color: PRIORITY_COLORS[(project as unknown as {priority?: string}).priority ?? "MEDIUM"] ?? "#2563eb" }}>
+                    {PRIORITY_LABELS[(project as unknown as {priority?: string}).priority ?? "MEDIUM"] ?? (project as unknown as {priority?: string}).priority}
+                  </p>
+                </div>
+              </div>
+              {/* Urgency */}
+              <div className="flex items-start gap-2">
+                <span className="text-gray-400 mt-0.5 flex-shrink-0"><Clock size={14} /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-400">Urgency</p>
+                  <p className="text-sm font-500 text-gray-800 truncate">
+                    {URGENCY_LABELS[(project as unknown as {urgency?: string}).urgency ?? "STANDARD"] ?? (project as unknown as {urgency?: string}).urgency}
+                  </p>
+                </div>
+              </div>
+              {/* FTEs */}
+              <div className="flex items-start gap-2">
+                <span className="text-gray-400 mt-0.5 flex-shrink-0"><Users size={14} /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-400">FTEs</p>
+                  <p className="text-sm font-500 text-gray-800 truncate">
+                    {(project as unknown as {numberOfFtes?: number | null}).numberOfFtes
+                      ? `${(project as unknown as {numberOfFtes: number}).numberOfFtes} FTE${(project as unknown as {numberOfFtes: number}).numberOfFtes > 1 ? "s" : ""}`
+                      : "—"}
+                  </p>
+                </div>
+              </div>
+              {/* Coverage */}
+              <div className="flex items-start gap-2">
+                <span className="text-gray-400 mt-0.5 flex-shrink-0"><Clock size={14} /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-400">Coverage</p>
+                  <p className="text-sm font-500 text-gray-800 truncate">
+                    {COVERAGE_MODEL_LABELS[(project as unknown as {coverageModel?: string | null}).coverageModel ?? ""] ?? "—"}
+                  </p>
+                </div>
+              </div>
+              {/* Workplace */}
+              <div className="flex items-start gap-2">
+                <span className="text-gray-400 mt-0.5 flex-shrink-0"><MapPin size={14} /></span>
+                <div className="min-w-0">
+                  <p className="text-[11px] text-gray-400">Workplace</p>
+                  <p className="text-sm font-500 text-gray-800 truncate">
+                    {WORKPLACE_MODEL_LABELS[(project as unknown as {workplaceModel?: string | null}).workplaceModel ?? ""] ?? "—"}
+                  </p>
+                </div>
+              </div>
               {project.estimatedCost && (
                 <div className="flex items-start gap-2">
                   <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
@@ -234,6 +335,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 ragStatus: project.ragStatus,
                 notes: project.notes,
                 closureNotes: (project as unknown as { closureNotes?: string | null }).closureNotes,
+                priority: (project as unknown as { priority?: string }).priority,
+                urgency: (project as unknown as { urgency?: string }).urgency,
+                numberOfFtes: (project as unknown as { numberOfFtes?: number | null }).numberOfFtes,
+                coverageModel: (project as unknown as { coverageModel?: string | null }).coverageModel,
+                workplaceModel: (project as unknown as { workplaceModel?: string | null }).workplaceModel,
               }}
               userRole={user.role}
             />

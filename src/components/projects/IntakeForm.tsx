@@ -10,6 +10,13 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { CostEstimator } from "./CostEstimator";
 import { AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+import {
+  PRIORITY_LABELS,
+  PRIORITY_COLORS,
+  URGENCY_LABELS,
+  COVERAGE_MODEL_LABELS,
+  WORKPLACE_MODEL_LABELS,
+} from "@/types/enums";
 
 interface CustomFormField {
   id: string;
@@ -34,6 +41,16 @@ const schema = z.object({
   anticipatedEndDate: z.string().min(1, "End date is required"),
   budgetAvailable: z.any().transform((v): boolean => v === true || v === "true"),
   notes: z.string().optional(),
+  priority:             z.enum(["CRITICAL","HIGH","MEDIUM","LOW"]),
+  urgency:              z.enum(["EMERGENCY","URGENT","STANDARD","PLANNED"]),
+  requestingDepartment: z.string().min(1, "Department is required"),
+  businessOwner:        z.string().min(1, "Business owner is required"),
+  businessJustification:z.string().min(20, "Please provide a business justification (at least 20 characters)"),
+  numberOfFtes:         z.number().int().min(1, "At least 1 FTE required"),
+  coverageModel:        z.enum(["STANDARD_8X5","EXTENDED_12X5","HOURS_24X7","FOLLOW_THE_SUN"]),
+  workplaceModel:       z.enum(["ON_SITE","REMOTE","HYBRID"]),
+  incumbentVendor:      z.string().optional(),
+  complianceNotes:      z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -45,6 +62,11 @@ const SCOPE_OPTIONS = [
   { value: "FIELD_SERVICES", label: "Field Services" },
 ];
 
+const PRIORITY_OPTIONS = Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }));
+const URGENCY_OPTIONS = Object.entries(URGENCY_LABELS).map(([value, label]) => ({ value, label }));
+const COVERAGE_OPTIONS = Object.entries(COVERAGE_MODEL_LABELS).map(([value, label]) => ({ value, label }));
+const WORKPLACE_OPTIONS = Object.entries(WORKPLACE_MODEL_LABELS).map(([value, label]) => ({ value, label }));
+
 export function IntakeForm() {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -53,6 +75,7 @@ export function IntakeForm() {
   const [enhanceError, setEnhanceError] = useState("");
   const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
+  const [similarProjects, setSimilarProjects] = useState<{id:string;projectName:string;status:string;location:string}[]>([]);
 
   useEffect(() => {
     fetch("/api/form-config")
@@ -66,7 +89,15 @@ export function IntakeForm() {
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { budgetAvailable: true, region: "NA" },
+    defaultValues: {
+      budgetAvailable: true,
+      region: "NA",
+      priority: "MEDIUM",
+      urgency: "STANDARD",
+      numberOfFtes: 1,
+      coverageModel: "STANDARD_8X5",
+      workplaceModel: "ON_SITE",
+    },
   });
 
   const scopeOfWork    = watch("scopeOfWork");
@@ -75,6 +106,32 @@ export function IntakeForm() {
   const region         = watch("region");
   const description    = watch("description");
   const projectName    = watch("projectName");
+  const watchedPriority = watch("priority") ?? "MEDIUM";
+  const watchedLocation = watch("location");
+  const watchedRegion   = watch("region");
+  const watchedScope    = watch("scopeOfWork");
+
+  // Duplicate detection with 500ms debounce
+  useEffect(() => {
+    if (!watchedScope || !watchedLocation || !watchedRegion) {
+      setSimilarProjects([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `/api/projects/similar?scopeOfWork=${watchedScope}&location=${encodeURIComponent(watchedLocation)}&region=${watchedRegion}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setSimilarProjects(data);
+        }
+      } catch {
+        // non-critical
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [watchedScope, watchedLocation, watchedRegion]);
 
   async function enhanceDescription() {
     if (!description || description.trim().length < 10) return;
@@ -185,6 +242,61 @@ export function IntakeForm() {
           )}
         </div>
 
+        {/* Business Context section */}
+        <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide col-span-2 mt-2">Business Context</p>
+
+        <Input
+          label="Requesting Department *"
+          placeholder="e.g. IT Operations, Finance, HR"
+          error={errors.requestingDepartment?.message}
+          {...register("requestingDepartment")}
+        />
+
+        <Input
+          label="Business Owner / Sponsor *"
+          placeholder="Full name and title"
+          error={errors.businessOwner?.message}
+          {...register("businessOwner")}
+        />
+
+        <div className="md:col-span-2">
+          <Textarea
+            label="Business Justification *"
+            placeholder="Why is this engagement needed? What business outcome does it support?"
+            rows={2}
+            error={errors.businessJustification?.message}
+            {...register("businessJustification")}
+          />
+        </div>
+
+        {/* Priority + Urgency row */}
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <label className="text-sm font-600 text-[#1a1f5e]">Priority</label>
+            <span
+              style={{
+                backgroundColor: (PRIORITY_COLORS[watchedPriority] ?? "#2563eb") + "18",
+                color: PRIORITY_COLORS[watchedPriority] ?? "#2563eb",
+              }}
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-600"
+            >
+              {PRIORITY_LABELS[watchedPriority] ?? watchedPriority}
+            </span>
+          </div>
+          <Select
+            options={PRIORITY_OPTIONS}
+            error={errors.priority?.message}
+            {...register("priority")}
+          />
+        </div>
+
+        <Select
+          label="Urgency"
+          options={URGENCY_OPTIONS}
+          error={errors.urgency?.message}
+          {...register("urgency")}
+        />
+
         <Select
           label="Scope of Work *"
           options={SCOPE_OPTIONS}
@@ -210,6 +322,57 @@ export function IntakeForm() {
           ]}
           error={errors.region?.message}
           {...register("region")}
+        />
+
+        {/* Duplicate detection warning */}
+        {similarProjects.length > 0 && (
+          <div className="md:col-span-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <p className="text-xs font-700 text-amber-700 mb-1">⚠ Similar active project(s) found</p>
+            {similarProjects.map(p => (
+              <a key={p.id} href={`/projects/${p.id}`} target="_blank" rel="noopener noreferrer"
+                className="block text-xs text-amber-600 hover:underline">
+                {p.projectName} — {p.location} ({p.status.replace(/_/g, " ")})
+              </a>
+            ))}
+            <p className="text-[10px] text-amber-500 mt-1">You can still submit — this is for your information only.</p>
+          </div>
+        )}
+
+        {/* Delivery Model section */}
+        <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide col-span-2 mt-2">Delivery Model</p>
+
+        <Input
+          label="Number of FTEs *"
+          type="number"
+          placeholder="e.g. 3"
+          error={errors.numberOfFtes?.message}
+          {...register("numberOfFtes", { valueAsNumber: true })}
+        />
+
+        <Select
+          label="Coverage Model *"
+          options={COVERAGE_OPTIONS}
+          error={errors.coverageModel?.message}
+          {...register("coverageModel")}
+        />
+
+        <Select
+          label="Workplace Model *"
+          options={WORKPLACE_OPTIONS}
+          error={errors.workplaceModel?.message}
+          {...register("workplaceModel")}
+        />
+
+        <Input
+          label="Incumbent Vendor"
+          placeholder="Leave blank if new deployment"
+          {...register("incumbentVendor")}
+        />
+
+        <Input
+          label="Compliance Requirements"
+          placeholder="e.g. HIPAA, SOX, PCI-DSS, None"
+          {...register("complianceNotes")}
         />
 
         <Input
@@ -337,7 +500,7 @@ export function IntakeForm() {
 
       {/* Live cost estimate */}
       {scopeOfWork && startDate && endDate && (
-        <CostEstimator scopeOfWork={scopeOfWork} startDate={startDate} endDate={endDate} region={region} />
+        <CostEstimator scopeOfWork={scopeOfWork} startDate={startDate} endDate={endDate} region={region} numberOfFtes={watch("numberOfFtes")} />
       )}
 
       <div className="flex justify-end gap-3 pt-2">

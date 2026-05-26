@@ -45,6 +45,18 @@ model Project {
   closureNotes         String?
   region               String   @default("NA")           // Region: NA | EMEA | LATAM | ASPAC
   customFields         String?  // JSON blob for dynamic field values
+  priority              String    @default("MEDIUM")
+  urgency               String    @default("STANDARD")
+  requestingDepartment  String?
+  businessOwner         String?
+  numberOfFtes          Int?
+  coverageModel         String?
+  workplaceModel        String?
+  incumbentVendor       String?
+  complianceNotes       String?
+  businessJustification String?
+  slaTargetDate  DateTime?
+  slaBreached    Boolean   @default(false)
 
   submittedById      String
   submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])
@@ -118,6 +130,15 @@ model AuditLog {
   action    String
   details   String?
   createdAt DateTime @default(now())
+}
+
+model SLAPolicy {
+  id          String   @id @default(cuid())
+  status      String   @unique
+  targetDays  Int
+  warningDays Int
+  isActive    Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
 }
 
 model FormField {

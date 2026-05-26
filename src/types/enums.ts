@@ -100,3 +100,37 @@ export const REGION_LABELS: Record<string, string> = {
   LATAM: "Latin America",
   ASPAC: "Asia Pacific",
 };
+
+export const PRIORITY_LABELS: Record<string, string> = {
+  CRITICAL: "Critical",
+  HIGH: "High",
+  MEDIUM: "Medium",
+  LOW: "Low",
+};
+
+export const PRIORITY_COLORS: Record<string, string> = {
+  CRITICAL: "#dc2626",
+  HIGH: "#d97706",
+  MEDIUM: "#2563eb",
+  LOW: "#6b7280",
+};
+
+export const URGENCY_LABELS: Record<string, string> = {
+  EMERGENCY: "Emergency",
+  URGENT: "Urgent",
+  STANDARD: "Standard",
+  PLANNED: "Planned",
+};
+
+export const COVERAGE_MODEL_LABELS: Record<string, string> = {
+  STANDARD_8X5: "Standard (8×5)",
+  EXTENDED_12X5: "Extended (12×5)",
+  HOURS_24X7: "24×7",
+  FOLLOW_THE_SUN: "Follow the Sun",
+};
+
+export const WORKPLACE_MODEL_LABELS: Record<string, string> = {
+  ON_SITE: "On-Site",
+  REMOTE: "Remote",
+  HYBRID: "Hybrid",
+};

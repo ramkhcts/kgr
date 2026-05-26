@@ -44,7 +44,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Fields PMO_LEAD can update
   const pmoLeadFields = ["ragStatus", "sowNotes", "notes", "estimatedCost", "infoRequestMessage", "poNumber",
-    "anticipatedStartDate", "anticipatedEndDate", "closureNotes"];
+    "anticipatedStartDate", "anticipatedEndDate", "closureNotes",
+    "numberOfFtes", "coverageModel", "workplaceModel", "complianceNotes", "businessJustification",
+    "priority", "urgency", "requestingDepartment", "businessOwner", "incumbentVendor"];
   // Additional fields only SUPER_ADMIN can update
   const superAdminOnlyFields = ["projectName", "description", "location"];
 

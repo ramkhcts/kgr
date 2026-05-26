@@ -4,6 +4,12 @@ import { AI_ENABLED } from "@/lib/ai";
 import { getAIEnabledSetting } from "@/lib/ai-settings";
 import { AISettingsCard } from "./AISettingsCard";
 import { UserManagementTable } from "./UserManagementTable";
+import { SLAPolicyEditor } from "./SLAPolicyEditor";
+
+const STATUS_ORDER = [
+  "SUBMITTED","UNDER_REVIEW","INFO_REQUIRED","SOLUTIONING","SOW_DRAFT",
+  "SOW_APPROVAL","SOW_SIGNED","PO_REQUESTED","PO_RECEIVED","RESOURCE_ASSIGNED","HANDED_TO_OPERATIONS",
+];
 
 export default async function AdminPage() {
   const user = await requireAuth(["PMO_LEAD", "SUPER_ADMIN"]);
@@ -15,6 +21,19 @@ export default async function AdminPage() {
 
   // Serialise dates for client component
   const serialised = users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString() }));
+
+  // Fetch SLA policies for SUPER_ADMIN
+  const slaPoliciesRaw = user.role === "SUPER_ADMIN"
+    ? await prisma.sLAPolicy.findMany()
+    : [];
+  const slaPolicies = slaPoliciesRaw.sort((a, b) => {
+    const ai = STATUS_ORDER.indexOf(a.status);
+    const bi = STATUS_ORDER.indexOf(b.status);
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+    return ai - bi;
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -29,6 +48,11 @@ export default async function AdminPage() {
           apiKeyConfigured={AI_ENABLED}
           aiEnabled={getAIEnabledSetting()}
         />
+      )}
+
+      {/* SLA Policy Editor — SUPER_ADMIN only */}
+      {user.role === "SUPER_ADMIN" && (
+        <SLAPolicyEditor initialPolicies={slaPolicies} />
       )}
 
       {/* User Management — interactive table for SUPER_ADMIN, read-only for PMO_LEAD */}

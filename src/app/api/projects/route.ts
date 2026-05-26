@@ -48,6 +48,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // Auto-escalate priority if urgency is high but priority is low
+    let priority = body.priority ?? "MEDIUM";
+    if ((body.urgency === "EMERGENCY" || body.urgency === "URGENT") && (priority === "MEDIUM" || priority === "LOW")) {
+      priority = "HIGH";
+    }
+
     const project = await prisma.project.create({
       data: {
         projectName: body.projectName,
@@ -64,6 +71,16 @@ export async function POST(req: NextRequest) {
         submittedById: user.id,
         status: "SUBMITTED",
         ragStatus: "GREEN",
+        priority,
+        urgency:               body.urgency ?? "STANDARD",
+        requestingDepartment:  body.requestingDepartment ?? null,
+        businessOwner:         body.businessOwner ?? null,
+        numberOfFtes:          body.numberOfFtes ? parseInt(body.numberOfFtes) : null,
+        coverageModel:         body.coverageModel ?? null,
+        workplaceModel:        body.workplaceModel ?? null,
+        incumbentVendor:       body.incumbentVendor ?? null,
+        complianceNotes:       body.complianceNotes ?? null,
+        businessJustification: body.businessJustification ?? null,
       },
       include: { submittedBy: { select: { id: true, name: true, email: true } } },
     });

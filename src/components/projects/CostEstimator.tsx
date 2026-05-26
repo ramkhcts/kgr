@@ -9,9 +9,10 @@ interface CostEstimatorProps {
   startDate: string;
   endDate: string;
   region?: string;
+  numberOfFtes?: number;
 }
 
-export function CostEstimator({ scopeOfWork, startDate, endDate, region = "NA" }: CostEstimatorProps) {
+export function CostEstimator({ scopeOfWork, startDate, endDate, region = "NA", numberOfFtes }: CostEstimatorProps) {
   const estimate = useMemo(() => {
     if (!scopeOfWork || !startDate || !endDate) return null;
     try {
@@ -27,6 +28,12 @@ export function CostEstimator({ scopeOfWork, startDate, endDate, region = "NA" }
   if (!estimate || estimate.low === 0) return null;
 
   const currencySymbol = estimate.currency === "EUR" ? "€" : "$";
+  const ftes = numberOfFtes && numberOfFtes > 1 ? numberOfFtes : null;
+
+  // Derive monthly figures: assume 22 working days per month
+  const WORK_DAYS_PER_MONTH = 22;
+  const perFteMonthlyLow  = Math.round(estimate.perDay.low  * WORK_DAYS_PER_MONTH);
+  const perFteMonthlyHigh = Math.round(estimate.perDay.high * WORK_DAYS_PER_MONTH);
 
   return (
     <div className="rounded-xl p-4" style={{ background: "linear-gradient(135deg, #1a1f5e10 0%, #3d2d8e10 100%)", border: "1px solid #1a1f5e20" }}>
@@ -51,6 +58,22 @@ export function CostEstimator({ scopeOfWork, startDate, endDate, region = "NA" }
           <p className="text-[10px] text-gray-500">{estimate.currency}</p>
         </div>
       </div>
+      {ftes ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="bg-white/60 rounded-lg p-2.5 text-center">
+            <p className="text-[10px] text-gray-500 mb-0.5">Per FTE / month</p>
+            <p className="text-sm font-700 text-[#1a1f5e]">
+              {currencySymbol}{perFteMonthlyLow.toLocaleString()} – {currencySymbol}{perFteMonthlyHigh.toLocaleString()}
+            </p>
+          </div>
+          <div className="bg-white/60 rounded-lg p-2.5 text-center">
+            <p className="text-[10px] text-gray-500 mb-0.5">Total Team ({ftes} FTEs) / month</p>
+            <p className="text-sm font-700 text-[#1a1f5e]">
+              {currencySymbol}{(perFteMonthlyLow * ftes).toLocaleString()} – {currencySymbol}{(perFteMonthlyHigh * ftes).toLocaleString()}
+            </p>
+          </div>
+        </div>
+      ) : null}
       <p className="text-[10px] text-gray-400 mt-2 text-center">
         Based on {scopeOfWork.replace(/_/g, " ")} rates · {currencySymbol}{estimate.perDay.low}–{currencySymbol}{estimate.perDay.high}/day · {region}
       </p>

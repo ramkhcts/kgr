@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 import { Textarea } from "@/components/ui/Textarea";
 import { Select } from "@/components/ui/Select";
 import { Edit2 } from "lucide-react";
+import { PRIORITY_LABELS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS } from "@/types/enums";
 
 type EditableFields = {
   projectName?: string;
@@ -17,6 +18,11 @@ type EditableFields = {
   ragStatus?: string;
   notes?: string;
   closureNotes?: string;
+  priority?: string;
+  urgency?: string;
+  numberOfFtes?: number | string;
+  coverageModel?: string;
+  workplaceModel?: string;
 };
 
 type Project = {
@@ -29,6 +35,11 @@ type Project = {
   ragStatus: string;
   notes?: string | null;
   closureNotes?: string | null;
+  priority?: string;
+  urgency?: string;
+  numberOfFtes?: number | null;
+  coverageModel?: string | null;
+  workplaceModel?: string | null;
 };
 
 const RAG_OPTIONS = [
@@ -68,6 +79,11 @@ export function EditProjectModal({
     ragStatus: project.ragStatus,
     notes: project.notes ?? "",
     closureNotes: project.closureNotes ?? "",
+    priority: project.priority ?? "MEDIUM",
+    urgency: project.urgency ?? "STANDARD",
+    numberOfFtes: project.numberOfFtes ?? 1,
+    coverageModel: project.coverageModel ?? "STANDARD_8X5",
+    workplaceModel: project.workplaceModel ?? "ON_SITE",
   });
 
   if (!canEdit) return null;
@@ -86,6 +102,11 @@ export function EditProjectModal({
         closureNotes: fields.closureNotes,
         anticipatedStartDate: fields.anticipatedStartDate,
         anticipatedEndDate: fields.anticipatedEndDate,
+        priority: fields.priority,
+        urgency: fields.urgency,
+        numberOfFtes: fields.numberOfFtes ? parseInt(String(fields.numberOfFtes)) : undefined,
+        coverageModel: fields.coverageModel,
+        workplaceModel: fields.workplaceModel,
       };
       if (isSuperAdmin) {
         body.projectName = fields.projectName;
@@ -169,6 +190,42 @@ export function EditProjectModal({
             value={fields.ragStatus ?? "GREEN"}
             onChange={(e) => update("ragStatus", e.target.value)}
           />
+
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label="Priority"
+              options={Object.entries(PRIORITY_LABELS).map(([value, label]) => ({ value, label }))}
+              value={fields.priority ?? "MEDIUM"}
+              onChange={(e) => update("priority", e.target.value)}
+            />
+            <Select
+              label="Urgency"
+              options={Object.entries(URGENCY_LABELS).map(([value, label]) => ({ value, label }))}
+              value={fields.urgency ?? "STANDARD"}
+              onChange={(e) => update("urgency", e.target.value)}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <Input
+              label="FTEs"
+              type="number"
+              value={String(fields.numberOfFtes ?? 1)}
+              onChange={(e) => update("numberOfFtes", e.target.value)}
+            />
+            <Select
+              label="Coverage Model"
+              options={Object.entries(COVERAGE_MODEL_LABELS).map(([value, label]) => ({ value, label }))}
+              value={fields.coverageModel ?? "STANDARD_8X5"}
+              onChange={(e) => update("coverageModel", e.target.value)}
+            />
+            <Select
+              label="Workplace Model"
+              options={Object.entries(WORKPLACE_MODEL_LABELS).map(([value, label]) => ({ value, label }))}
+              value={fields.workplaceModel ?? "ON_SITE"}
+              onChange={(e) => update("workplaceModel", e.target.value)}
+            />
+          </div>
 
           <Textarea
             label="Notes"
