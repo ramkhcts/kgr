@@ -39,6 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     assignedResourceId,
     ragStatus,
     overrideReason,
+    poValue,
+    poExpiryDate,
   } = body;
 
   const project = await prisma.project.findUnique({
@@ -161,6 +163,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (infoRequestMessage) updateData.infoRequestMessage = infoRequestMessage;
   if (poNumber) updateData.poNumber = poNumber;
   if (assignedResourceId) updateData.assignedResourceId = assignedResourceId;
+
+  if (toStatus === "PO_RECEIVED") {
+    if (poValue) updateData.poValue = parseFloat(poValue);
+    updateData.poReceivedDate = new Date();
+    if (poExpiryDate) updateData.poExpiryDate = new Date(poExpiryDate);
+  }
 
   const updated = await prisma.project.update({ where: { id }, data: updateData });
 

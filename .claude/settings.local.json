@@ -11,7 +11,12 @@
       "Bash(git -C /Users/neelima/KGR status --short)",
       "Bash(git -C /Users/neelima/KGR add .gitignore)",
       "Bash(git -C /Users/neelima/KGR rm --cached prisma/dev.db)",
-      "Bash(git -C /Users/neelima/KGR commit -m ' *)"
+      "Bash(git -C /Users/neelima/KGR commit -m ' *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" --max-time 10 https://kgr.math-mojo.com)",
+      "Bash(curl -s --max-time 10 -I https://kgr.math-mojo.com)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"%{http_code}\" https://kgr.math-mojo.com/login)",
+      "Bash(curl -s --max-time 10 -o /dev/null -w \"%{http_code}\" https://kgr.math-mojo.com/dashboard)",
+      "Bash(git add *)"
     ]
   }
 }

@@ -6,7 +6,9 @@ import { StatusBadge } from "@/components/projects/StatusBadge";
 import { RAGBadge } from "@/components/projects/RAGBadge";
 import { ProjectActions } from "./ProjectActions";
 import { EditProjectModal } from "./EditProjectModal";
+import { CloneProjectModal } from "./CloneProjectModal";
 import { CommentsThread } from "@/components/projects/CommentsThread";
+import { InvoiceMilestonesPanel } from "@/components/projects/InvoiceMilestonesPanel";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
 import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS } from "@/types/enums";
@@ -36,6 +38,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         include: { user: { select: { id: true, name: true, role: true } } },
         orderBy: { createdAt: "asc" },
       },
+      invoiceMilestones: { orderBy: { dueDate: "asc" } },
     },
   });
 
@@ -63,9 +66,17 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <h1 className="text-xl font-800 text-[#1a1f5e] leading-tight">{project.projectName}</h1>
               <p className="text-sm text-gray-500 mt-0.5">ID: {project.id.slice(0, 8).toUpperCase()}</p>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
               <RAGBadge status={project.ragStatus} />
               <StatusBadge status={project.status} />
+              {(["PMO_LEAD", "SUPER_ADMIN"].includes(user.role) ||
+                (user.role === "CLIENT" && project.submittedById === user.id)) && (
+                <CloneProjectModal
+                  projectId={project.id}
+                  projectName={project.projectName}
+                  defaultName={project.projectName + " (Copy)"}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -322,6 +333,81 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             userRole={user.role}
             userId={user.id}
           />
+
+          {/* Commercial card — PMO_LEAD / SUPER_ADMIN only, when PO or estimated cost exists */}
+          {["PMO_LEAD", "SUPER_ADMIN"].includes(user.role) &&
+            ((project as unknown as { poValue?: number | null }).poValue != null || project.estimatedCost != null) && (() => {
+              const p = project as unknown as {
+                poValue?: number | null;
+                poExpiryDate?: Date | null;
+                invoicedAmount?: number | null;
+                invoiceMilestones: { id: string; description: string; amount: number; dueDate: Date | null; invoicedAt: Date | null; paidAt: Date | null; status: string }[];
+              };
+              const poValue = p.poValue;
+              const estimatedCost = project.estimatedCost;
+              const delta = poValue != null && estimatedCost != null ? poValue - estimatedCost : null;
+              return (
+                <Card>
+                  <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-3">Commercial</p>
+                  <div className="space-y-2 mb-4">
+                    {estimatedCost != null && (
+                      <div className="flex items-start gap-2">
+                        <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-gray-400">Estimated Cost</p>
+                          <p className="text-sm font-600 text-gray-800">${estimatedCost.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    )}
+                    {poValue != null && (
+                      <div className="flex items-start gap-2">
+                        <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-gray-400">PO Value</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-700 text-[#1a1f5e]">${poValue.toLocaleString()}</p>
+                            {delta != null && (
+                              <span className={`text-xs font-600 ${delta >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                {delta >= 0 ? "+" : ""}${delta.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {p.poExpiryDate && (
+                      <div className="flex items-start gap-2">
+                        <Calendar size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-gray-400">PO Expiry</p>
+                          <p className="text-sm font-500 text-gray-800">{format(new Date(p.poExpiryDate), "MMM d, yyyy")}</p>
+                        </div>
+                      </div>
+                    )}
+                    {(p.invoicedAmount ?? 0) > 0 && (
+                      <div className="flex items-start gap-2">
+                        <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-gray-400">Total Invoiced</p>
+                          <p className="text-sm font-700 text-blue-700">${(p.invoicedAmount ?? 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <InvoiceMilestonesPanel
+                    projectId={project.id}
+                    userRole={user.role}
+                    initialMilestones={p.invoiceMilestones.map((m) => ({
+                      ...m,
+                      projectId: project.id,
+                      dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+                      invoicedAt: m.invoicedAt ? m.invoicedAt.toISOString() : null,
+                      paidAt: m.paidAt ? m.paidAt.toISOString() : null,
+                    }))}
+                  />
+                </Card>
+              );
+            })()}
 
           {(user.role === "SUPER_ADMIN" || user.role === "PMO_LEAD") && (
             <EditProjectModal

@@ -17,12 +17,13 @@ model User {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  submittedProjects Project[]       @relation("Submitter")
-  assignedProjects  Project[]       @relation("AssignedResource")
-  auditLogs         AuditLog[]
-  statusChanges     StatusHistory[]
-  comments          Comment[]
-  uploadedDocuments Document[]
+  submittedProjects   Project[]         @relation("Submitter")
+  assignedProjects    Project[]         @relation("AssignedResource")
+  auditLogs           AuditLog[]
+  statusChanges       StatusHistory[]
+  comments            Comment[]
+  uploadedDocuments   Document[]
+  resourceAssignments ProjectResource[] @relation("AssignedResources")
 }
 
 model Project {
@@ -58,6 +59,11 @@ model Project {
   slaTargetDate  DateTime?
   slaBreached    Boolean   @default(false)
 
+  poValue        Float?
+  poReceivedDate DateTime?
+  poExpiryDate   DateTime?
+  invoicedAmount Float?    @default(0)
+
   submittedById      String
   submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])
   assignedResourceId String?
@@ -66,10 +72,43 @@ model Project {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  statusHistory StatusHistory[]
-  auditLogs     AuditLog[]
-  documents     Document[]
-  comments      Comment[]
+  statusHistory    StatusHistory[]
+  auditLogs        AuditLog[]
+  documents        Document[]
+  comments         Comment[]
+  resources        ProjectResource[]
+  invoiceMilestones InvoiceMilestone[]
+}
+
+model ProjectResource {
+  id        String    @id @default(cuid())
+  projectId String
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?     @relation("AssignedResources", fields: [userId], references: [id])
+  roleName  String
+  dailyRate Float
+  currency  String    @default("USD")
+  startDate DateTime?
+  endDate   DateTime?
+  isLead    Boolean   @default(false)
+  notes     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model InvoiceMilestone {
+  id          String    @id @default(cuid())
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  dueDate     DateTime?
+  invoicedAt  DateTime?
+  paidAt      DateTime?
+  status      String    @default("PENDING")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 }
 
 model Document {

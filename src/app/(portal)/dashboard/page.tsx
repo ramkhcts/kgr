@@ -48,6 +48,15 @@ export default async function DashboardPage() {
   const myActionStatuses = needsActionStatuses[user.role as UserRole] ?? [];
   const needsAction = projects.filter((p) => myActionStatuses.includes(p.status as ProjectStatus)).length;
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const slaBreachedCount = await (prisma.project as any).count({
+    where: {
+      ...(user.role === "CLIENT" ? { submittedById: user.id } : {}),
+      slaBreached: true,
+      status: { notIn: ["CLOSED_SUCCESS", "CANCELLED"] },
+    },
+  }) as number;
+
   // Pipeline chart data
   const statusCounts = projects.reduce((acc, p) => {
     acc[p.status] = (acc[p.status] || 0) + 1;
@@ -100,6 +109,7 @@ export default async function DashboardPage() {
         active={activeProjects}
         needsAction={needsAction}
         closedThisMonth={closedThisMonth}
+        slaBreached={slaBreachedCount}
       />
 
       {/* Charts row */}

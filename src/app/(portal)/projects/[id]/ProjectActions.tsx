@@ -65,8 +65,10 @@ export function ProjectActions({ project, userRole, userId }: {
   const [exitCriteria, setExitCriteria]         = useState<ExitCriteriaResult | null>(null);
 
   // PO submission (CLIENT + PMO_LEAD at PO_REQUESTED)
-  const [poNumber, setPoNumber]   = useState("");
-  const [poFile, setPoFile]       = useState<File | null>(null);
+  const [poNumber, setPoNumber]         = useState("");
+  const [poValue, setPoValue]           = useState("");
+  const [poExpiryDate, setPoExpiryDate] = useState("");
+  const [poFile, setPoFile]             = useState<File | null>(null);
 
   // Closure notes (PMO_LEAD at HANDED_TO_OPERATIONS)
   const [closureNotes, setClosureNotes] = useState("");
@@ -152,7 +154,13 @@ export function ProjectActions({ project, userRole, userId }: {
       const res = await fetch(`/api/projects/${project.id}/status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ toStatus: "PO_RECEIVED", poNumber: poNumber.trim(), ragStatus }),
+        body: JSON.stringify({
+          toStatus: "PO_RECEIVED",
+          poNumber: poNumber.trim(),
+          ragStatus,
+          poValue: poValue ? parseFloat(poValue) : undefined,
+          poExpiryDate: poExpiryDate || undefined,
+        }),
       });
       if (res.ok) {
         router.refresh();
@@ -315,6 +323,21 @@ export function ProjectActions({ project, userRole, userId }: {
                 Submit Purchase Order
               </p>
               <Input
+                label="PO Value (USD) *"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 50000.00"
+                value={poValue}
+                onChange={(e) => setPoValue(e.target.value)}
+              />
+              <Input
+                label="PO Expiry Date"
+                type="date"
+                value={poExpiryDate}
+                onChange={(e) => setPoExpiryDate(e.target.value)}
+              />
+              <Input
                 label="PO Number *"
                 placeholder="e.g. PO-2024-00123"
                 value={poNumber}
@@ -357,6 +380,21 @@ export function ProjectActions({ project, userRole, userId }: {
               <p className="text-xs text-gray-500">
                 Once the client's PO is in hand, enter the PO number to advance the project.
               </p>
+              <Input
+                label="PO Value (USD) *"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 50000.00"
+                value={poValue}
+                onChange={(e) => setPoValue(e.target.value)}
+              />
+              <Input
+                label="PO Expiry Date"
+                type="date"
+                value={poExpiryDate}
+                onChange={(e) => setPoExpiryDate(e.target.value)}
+              />
               <Input
                 label="PO Number *"
                 placeholder="e.g. PO-2024-00123"
