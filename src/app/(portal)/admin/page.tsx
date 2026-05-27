@@ -5,6 +5,7 @@ import { getAIEnabledSetting } from "@/lib/ai-settings";
 import { AISettingsCard } from "./AISettingsCard";
 import { UserManagementTable } from "./UserManagementTable";
 import { SLAPolicyEditor } from "./SLAPolicyEditor";
+import Link from "next/link";
 
 const STATUS_ORDER = [
   "SUBMITTED","UNDER_REVIEW","INFO_REQUIRED","SOLUTIONING","SOW_DRAFT",
@@ -40,6 +41,22 @@ export default async function AdminPage() {
       <div>
         <h1 className="text-xl font-800 text-[#1a1f5e]">Administration</h1>
         <p className="text-sm text-gray-500">Manage users and system settings</p>
+      </div>
+
+      {/* Quick links */}
+      <div className="flex flex-wrap gap-3">
+        <Link
+          href="/admin/utilization"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#e2e4f0] bg-white text-sm font-600 text-[#1a1f5e] hover:bg-[#f4f5fb] transition-colors"
+        >
+          Resource Utilization →
+        </Link>
+        <Link
+          href="/admin/accounts"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#e2e4f0] bg-white text-sm font-600 text-[#1a1f5e] hover:bg-[#f4f5fb] transition-colors"
+        >
+          Client Accounts →
+        </Link>
       </div>
 
       {/* AI Settings — SUPER_ADMIN only */}

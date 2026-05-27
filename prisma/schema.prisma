@@ -26,6 +26,7 @@ model User {
   resourceAssignments ProjectResource[] @relation("AssignedResources")
   changeRequestsSubmitted ChangeRequest[] @relation("CRSubmitter")
   changeRequestsReviewed  ChangeRequest[] @relation("CRReviewer")
+  skills          UserSkill[]
 }
 
 model Project {
@@ -61,6 +62,7 @@ model Project {
   slaTargetDate  DateTime?
   slaBreached    Boolean   @default(false)
   slaPausedAt    DateTime?
+  slaCredit      Float?    @default(0)
 
   poValue        Float?
   poReceivedDate DateTime?
@@ -117,6 +119,7 @@ model Project {
   resources        ProjectResource[]
   invoiceMilestones InvoiceMilestone[]
   changeRequests   ChangeRequest[]
+  slaBreaches      SLABreach[]
 }
 
 model ProjectResource {
@@ -172,6 +175,8 @@ model Document {
   uploadedById String?
   uploadedBy   User?    @relation(fields: [uploadedById], references: [id])
   createdAt    DateTime @default(now())
+  version      Int      @default(1)
+  supersededAt DateTime?
 }
 
 model Comment {
@@ -264,4 +269,26 @@ model ChangeRequest {
   submittedAt    DateTime @default(now())
   reviewedAt     DateTime?
   updatedAt      DateTime @updatedAt
+}
+
+model UserSkill {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skillName        String
+  certificationBody String?
+  expiryDate       DateTime?
+  proficiencyLevel String?  // BEGINNER | INTERMEDIATE | ADVANCED | EXPERT
+  createdAt        DateTime @default(now())
+}
+
+model SLABreach {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status       String
+  breachedAt   DateTime @default(now())
+  daysOverdue  Int
+  creditPct    Float    @default(0)
+  creditAmount Float    @default(0)
 }

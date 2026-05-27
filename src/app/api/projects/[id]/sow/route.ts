@@ -31,6 +31,19 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       rateCardEntries
     );
 
+    // Supersede existing SOW drafts
+    await prisma.document.updateMany({
+      where: { projectId: id, type: "SOW_DRAFT", supersededAt: null },
+      data: { supersededAt: new Date() },
+    });
+
+    // Get max version
+    const maxVersion = await prisma.document.aggregate({
+      where: { projectId: id, type: "SOW_DRAFT" },
+      _max: { version: true },
+    });
+    const nextVersion = (maxVersion._max.version ?? 0) + 1;
+
     const doc = await prisma.document.create({
       data: {
         projectId: id,
@@ -40,6 +53,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
         size: pdfBuffer.length,
         content: pdfBuffer,
         uploadedById: user.id,
+        version: nextVersion,
       },
     });
 

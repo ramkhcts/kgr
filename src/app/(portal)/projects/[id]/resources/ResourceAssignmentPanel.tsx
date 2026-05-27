@@ -6,9 +6,10 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Modal } from "@/components/ui/Modal";
-import { Star, Trash2, Pencil, UserPlus, CheckCircle2 } from "lucide-react";
+import { Star, Trash2, Pencil, UserPlus, CheckCircle2, ChevronDown, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { BG_CHECK_STATUS_LABELS, SHIFT_PATTERN_LABELS } from "@/types/enums";
+import { SkillsPanel } from "@/components/users/SkillsPanel";
 
 type TeamMember = {
   id: string;
@@ -115,6 +116,7 @@ export function ResourceAssignmentPanel({
   const [isExternalMode, setIsExternalMode] = useState(false);
   const [editingResource, setEditingResource] = useState<ProjectResource | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
+  const [expandedResourceId, setExpandedResourceId] = useState<string | null>(null);
 
   // Add form state
   const [roleName, setRoleName] = useState("");
@@ -577,11 +579,20 @@ export function ResourceAssignmentPanel({
                       ? `${r.externalResourceName} (Ext.)`
                       : r.user?.name ?? "(unassigned)";
                     const displayEmail = r.externalResourceEmail ?? r.user?.email;
+                    const isExpanded = expandedResourceId === r.id;
+                    const colSpan = canEdit ? 7 : 6;
                     return (
-                      <tr key={r.id} className="border-b border-[#e2e4f0] last:border-0 hover:bg-[#f9fafb]">
+                      <>
+                      <tr key={r.id} className={`border-b border-[#e2e4f0] ${isExpanded ? "" : "last:border-0"} hover:bg-[#f9fafb] cursor-pointer`}
+                        onClick={() => setExpandedResourceId(isExpanded ? null : r.id)}>
                         <td className="px-3 py-2.5">
-                          <p className="text-sm font-600 text-[#1a1f5e]">{displayName}</p>
-                          {displayEmail && <p className="text-xs text-gray-400">{displayEmail}</p>}
+                          <div className="flex items-center gap-1.5">
+                            {isExpanded ? <ChevronDown size={12} className="text-gray-400 flex-shrink-0" /> : <ChevronRight size={12} className="text-gray-400 flex-shrink-0" />}
+                            <div>
+                              <p className="text-sm font-600 text-[#1a1f5e]">{displayName}</p>
+                              {displayEmail && <p className="text-xs text-gray-400">{displayEmail}</p>}
+                            </div>
+                          </div>
                         </td>
                         <td className="px-3 py-2.5 text-xs text-gray-700">{r.roleName}</td>
                         <td className="px-3 py-2.5 text-xs text-gray-700 whitespace-nowrap">
@@ -611,7 +622,7 @@ export function ResourceAssignmentPanel({
                             : "—"}
                         </td>
                         {canEdit && (
-                          <td className="px-3 py-2.5">
+                          <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
                             <div className="flex items-center gap-1">
                               <button onClick={() => openEditForm(r)}
                                 className="p-1.5 rounded-lg hover:bg-[#e8eaf6] text-gray-400 hover:text-[#1a1f5e] transition-colors">
@@ -627,6 +638,18 @@ export function ResourceAssignmentPanel({
                           </td>
                         )}
                       </tr>
+                      {isExpanded && r.userId && (
+                        <tr key={r.id + "-skills"} className="border-b border-[#e2e4f0]">
+                          <td colSpan={colSpan} className="px-4 py-3 bg-[#f8f9ff]">
+                            <SkillsPanel
+                              userId={r.userId}
+                              userName={displayName}
+                              canEdit={false}
+                            />
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     );
                   })}
                 </tbody>

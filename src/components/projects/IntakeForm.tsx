@@ -293,6 +293,9 @@ export function IntakeForm() {
               Tip: click ✨ Enhance to let AI expand and professionalise your description
             </p>
           )}
+          <p className="text-xs text-gray-400 mt-1">
+            Your description is processed by an AI service to improve clarity. No personal data is shared.
+          </p>
         </div>
 
         {/* Business Context section */}

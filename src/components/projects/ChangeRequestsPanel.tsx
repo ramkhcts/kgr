@@ -62,6 +62,7 @@ export function ChangeRequestsPanel({
     description: "",
     impactScope: "",
     impactCost: "",
+    impactCostDirection: "INCREASE" as "INCREASE" | "DECREASE",
     impactSchedule: "",
   });
   const [submitting, setSubmitting] = useState(false);
@@ -111,7 +112,9 @@ export function ChangeRequestsPanel({
           title: submitForm.title,
           description: submitForm.description,
           impactScope: submitForm.impactScope || null,
-          impactCost: submitForm.impactCost ? parseFloat(submitForm.impactCost) : null,
+          impactCost: submitForm.impactCost
+          ? (submitForm.impactCostDirection === "DECREASE" ? -1 : 1) * parseFloat(submitForm.impactCost)
+          : null,
           impactSchedule: submitForm.impactSchedule || null,
         }),
       });
@@ -121,7 +124,7 @@ export function ChangeRequestsPanel({
         return;
       }
       setShowSubmit(false);
-      setSubmitForm({ title: "", description: "", impactScope: "", impactCost: "", impactSchedule: "" });
+      setSubmitForm({ title: "", description: "", impactScope: "", impactCost: "", impactCostDirection: "INCREASE", impactSchedule: "" });
       fetchCRs();
       router.refresh();
     } finally {
@@ -301,9 +304,28 @@ export function ChangeRequestsPanel({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-600 text-gray-600 mb-1">Cost Impact ($)</label>
+                  <div className="flex gap-2 mb-1.5">
+                    {(["INCREASE", "DECREASE"] as const).map((dir) => (
+                      <button
+                        key={dir}
+                        type="button"
+                        onClick={() => setSubmitForm((f) => ({ ...f, impactCostDirection: dir }))}
+                        className={`flex-1 px-2 py-1 rounded-lg text-xs font-600 border transition-colors ${
+                          submitForm.impactCostDirection === dir
+                            ? dir === "INCREASE"
+                              ? "bg-green-100 border-green-300 text-green-700"
+                              : "bg-red-100 border-red-300 text-red-700"
+                            : "bg-white border-[#e2e4f0] text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {dir === "INCREASE" ? "+ Increase" : "- Decrease"}
+                      </button>
+                    ))}
+                  </div>
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     value={submitForm.impactCost}
                     onChange={(e) => setSubmitForm((f) => ({ ...f, impactCost: e.target.value }))}
                     className="w-full border border-[#e2e4f0] rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1a1f5e]/20 focus:border-[#1a1f5e]"

@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { addDays } from "date-fns";
+import { addDays, differenceInBusinessDays } from "date-fns";
 
 export async function setSLATargetForStatus(projectId: string, status: string): Promise<void> {
   const policy = await prisma.sLAPolicy.findUnique({ where: { status } });
@@ -8,6 +8,37 @@ export async function setSLATargetForStatus(projectId: string, status: string): 
   await prisma.project.update({
     where: { id: projectId },
     data: { slaTargetDate: targetDate, slaBreached: false },
+  });
+}
+
+export async function recordSLABreach(projectId: string, status: string): Promise<void> {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { slaTargetDate: true, poValue: true, estimatedCost: true }
+  });
+  if (!project?.slaTargetDate) return;
+
+  const now = new Date();
+  const daysOverdue = Math.max(0, differenceInBusinessDays(now, project.slaTargetDate));
+  if (daysOverdue === 0) return;
+
+  // SLA credit: 1% of PO value per business day overdue, max 10%
+  const contractValue = project.poValue ?? project.estimatedCost ?? 0;
+  const creditPct = Math.min(daysOverdue * 1, 10);
+  const creditAmount = contractValue * creditPct / 100;
+
+  await prisma.sLABreach.create({
+    data: { projectId, status, daysOverdue, creditPct, creditAmount }
+  });
+
+  // Update project slaCredit (sum of all credits)
+  const total = await prisma.sLABreach.aggregate({
+    where: { projectId },
+    _sum: { creditAmount: true }
+  });
+  await prisma.project.update({
+    where: { id: projectId },
+    data: { slaCredit: total._sum.creditAmount ?? 0, slaBreached: true }
   });
 }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { setSLATargetForStatus } from "@/lib/sla";
+import { setSLATargetForStatus, recordSLABreach } from "@/lib/sla";
 import {
   getAvailableTransitions,
   CANCEL_ALLOWED_ROLES,
@@ -243,6 +243,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }).catch((e) => console.error("[EMAIL ERROR]", e));
 
   setSLATargetForStatus(id, toStatus).catch(() => {});
+  recordSLABreach(id, currentStatus).catch(() => {});
 
   return NextResponse.json(updated);
 }

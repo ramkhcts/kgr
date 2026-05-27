@@ -53,7 +53,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         take: 20,
       },
       documents: {
-        select: { id: true, name: true, type: true, mimeType: true, size: true, createdAt: true, uploadedBy: { select: { name: true } } },
+        select: { id: true, name: true, type: true, mimeType: true, size: true, createdAt: true, version: true, supersededAt: true, uploadedBy: { select: { name: true } } },
         orderBy: { createdAt: "desc" },
       },
       comments: {
@@ -63,9 +63,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       invoiceMilestones: { orderBy: { dueDate: "asc" } },
       changeRequests: { select: { id: true } },
       resources: {
-        include: { user: { select: { name: true, email: true } } },
+        include: { user: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: "asc" },
       },
+      slaBreaches: { orderBy: { breachedAt: "desc" } },
     },
   });
 
@@ -118,6 +119,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     procurementContactName?: string | null;
     procurementContactEmail?: string | null;
     closureNotes?: string | null;
+    slaCredit?: number | null;
     invoiceMilestones: {
       id: string; description: string; amount: number; dueDate: Date | null;
       invoicedAt: Date | null; paidAt: Date | null; status: string;
@@ -126,7 +128,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     }[];
     resources: {
       id: string; projectId: string; userId: string | null;
-      user: { name: string; email: string } | null;
+      user: { id: string; name: string; email: string } | null;
       roleName: string; dailyRate: number; currency: string;
       startDate: Date | null; endDate: Date | null; isLead: boolean; notes: string | null;
       bgCheckStatus?: string | null; shiftPattern?: string | null;
@@ -433,24 +435,41 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               <p className="text-sm text-gray-400 py-2">No documents uploaded yet.</p>
             ) : (
               <div className="space-y-2">
-                {project.documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-[#e2e4f0] hover:bg-[#f4f5fb] transition-colors">
-                    <FileText size={16} className="text-[#1a1f5e] flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-600 text-gray-800 truncate">{doc.name}</p>
-                      <p className="text-[11px] text-gray-400">
-                        {DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] ?? doc.type}
-                        {" · "}{formatSize(doc.size)}
-                        {" · "}{format(new Date(doc.createdAt), "MMM d, yyyy")}
-                        {doc.uploadedBy && ` · ${doc.uploadedBy.name}`}
-                      </p>
+                {project.documents.map((doc) => {
+                  const isSuperseded = !!(doc as unknown as { supersededAt: Date | null }).supersededAt;
+                  const version = (doc as unknown as { version?: number }).version;
+                  const isSOWDraft = doc.type === "SOW_DRAFT";
+                  return (
+                    <div key={doc.id} className={`flex items-center gap-3 p-2.5 rounded-lg border transition-colors ${isSuperseded ? "border-gray-200 bg-gray-50 opacity-60" : "border-[#e2e4f0] hover:bg-[#f4f5fb]"}`}>
+                      <FileText size={16} className={`flex-shrink-0 ${isSuperseded ? "text-gray-400" : "text-[#1a1f5e]"}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`text-sm font-600 truncate ${isSuperseded ? "text-gray-400" : "text-gray-800"}`}>{doc.name}</p>
+                          {isSOWDraft && version != null && (
+                            <span className={`text-[10px] font-700 px-1.5 py-0.5 rounded ${isSuperseded ? "bg-gray-200 text-gray-500" : "bg-[#e8eaf6] text-[#1a1f5e]"}`}>
+                              v{version}
+                            </span>
+                          )}
+                          {isSuperseded && (
+                            <span className="text-[10px] font-600 px-1.5 py-0.5 rounded bg-gray-200 text-gray-500">
+                              Superseded
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-400">
+                          {DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] ?? doc.type}
+                          {" · "}{formatSize(doc.size)}
+                          {" · "}{format(new Date(doc.createdAt), "MMM d, yyyy")}
+                          {doc.uploadedBy && ` · ${doc.uploadedBy.name}`}
+                        </p>
+                      </div>
+                      <a href={`/api/documents/${doc.id}`} target="_blank" rel="noopener noreferrer"
+                         className={`flex-shrink-0 p-1.5 rounded-lg transition-colors ${isSuperseded ? "text-gray-300" : "hover:bg-[#1a1f5e] hover:text-white text-gray-400"}`}>
+                        <Download size={14} />
+                      </a>
                     </div>
-                    <a href={`/api/documents/${doc.id}`} target="_blank" rel="noopener noreferrer"
-                       className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[#1a1f5e] hover:text-white text-gray-400 transition-colors">
-                      <Download size={14} />
-                    </a>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
@@ -477,6 +496,37 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               )}
             </Card>
           )}
+
+          {/* Client document downloads (Gap 48) */}
+          {isClient && (() => {
+            const clientDocTypes = ["SIGNED_SOW", "PO", "STAFFING_ORDER"];
+            const clientDocs = project.documents.filter((d) => clientDocTypes.includes(d.type));
+            if (clientDocs.length === 0) return null;
+            return (
+              <Card>
+                <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Your Documents</p>
+                <div className="space-y-2">
+                  {clientDocs.map((doc) => (
+                    <div key={doc.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-[#e2e4f0] hover:bg-[#f4f5fb] transition-colors">
+                      <FileText size={16} className="text-[#1a1f5e] flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-600 text-gray-800 truncate">{doc.name}</p>
+                        <p className="text-[11px] text-gray-400">
+                          {DOCUMENT_TYPE_LABELS[doc.type as keyof typeof DOCUMENT_TYPE_LABELS] ?? doc.type}
+                          {" · "}{formatSize(doc.size)}
+                          {" · "}{format(new Date(doc.createdAt), "MMM d, yyyy")}
+                        </p>
+                      </div>
+                      <a href={`/api/documents/${doc.id}`} target="_blank" rel="noopener noreferrer"
+                         className="flex-shrink-0 p-1.5 rounded-lg hover:bg-[#1a1f5e] hover:text-white text-gray-400 transition-colors">
+                        <Download size={14} />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            );
+          })()}
 
           {/* Comments / Collaboration */}
           <Card>
@@ -682,6 +732,19 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       </div>
                     </div>
                   )}
+                  {["PMO_LEAD", "SUPER_ADMIN"].includes(user.role) && (p.slaCredit ?? 0) > 0 && (() => {
+                    const contractValue = (p.poValue ?? project.estimatedCost ?? 0);
+                    const creditPct = contractValue > 0 ? ((p.slaCredit ?? 0) / contractValue * 100).toFixed(1) : "—";
+                    return (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 border border-red-200">
+                        <AlertTriangle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-[11px] text-red-600 font-600">SLA Credit Accrued</p>
+                          <p className="text-sm font-700 text-red-700">${(p.slaCredit ?? 0).toLocaleString()} ({creditPct}% of contract value)</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <InvoiceMilestonesPanel
                   projectId={project.id}
