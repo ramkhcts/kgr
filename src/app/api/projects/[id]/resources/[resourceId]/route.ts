@@ -18,10 +18,14 @@ export async function PATCH(
   const body = await req.json();
 
   const updateData: Record<string, unknown> = {};
-  const allowedFields = ["roleName", "dailyRate", "currency", "startDate", "endDate", "isLead", "notes", "userId"];
+  const allowedFields = [
+    "roleName", "dailyRate", "currency", "startDate", "endDate", "isLead", "notes", "userId",
+    "bgCheckStatus", "shiftPattern", "rampUpEndDate", "rampDownStartDate",
+    "externalResourceName", "externalResourceEmail",
+  ];
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
-      if (field === "startDate" || field === "endDate") {
+      if (field === "startDate" || field === "endDate" || field === "rampUpEndDate" || field === "rampDownStartDate") {
         updateData[field] = body[field] ? new Date(body[field]) : null;
       } else if (field === "dailyRate") {
         updateData[field] = parseFloat(body[field]);

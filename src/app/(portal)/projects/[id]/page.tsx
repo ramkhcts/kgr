@@ -12,10 +12,31 @@ import { InvoiceMilestonesPanel } from "@/components/projects/InvoiceMilestonesP
 import { ChangeRequestsPanel } from "@/components/projects/ChangeRequestsPanel";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
-import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS, CONTRACT_TYPE_LABELS, DATA_CLASSIFICATION_LABELS, DATA_CLASSIFICATION_COLORS, ITSM_PLATFORM_LABELS } from "@/types/enums";
-import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download, AlertTriangle, Users } from "lucide-react";
+import {
+  SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS,
+  COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS, CONTRACT_TYPE_LABELS, DATA_CLASSIFICATION_LABELS,
+  DATA_CLASSIFICATION_COLORS, ITSM_PLATFORM_LABELS, SERVICE_TIER_LABELS, SERVICE_TIER_COLORS,
+  SHIFT_PATTERN_LABELS, BG_CHECK_STATUS_LABELS, STATUS_LABELS,
+} from "@/types/enums";
+import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download, AlertTriangle, Users, Info, CheckCircle2, Star } from "lucide-react";
 import Link from "next/link";
 import { AIInsightsPanel } from "@/components/projects/AIInsightsPanel";
+
+const CLIENT_STATUS_HINTS: Record<string, { what: string; action: string }> = {
+  SUBMITTED: { what: "Your request has been received.", action: "No action needed — we will begin reviewing shortly." },
+  UNDER_REVIEW: { what: "Our team is reviewing your request.", action: "No action needed. We may contact you with questions." },
+  INFO_REQUIRED: { what: "We need more information before proceeding.", action: "Please check the comments section below and respond to our questions." },
+  SOLUTIONING: { what: "Our team is designing the solution and estimating costs.", action: "No action needed. You will receive a Statement of Work for review soon." },
+  SOW_DRAFT: { what: "A Statement of Work is being drafted.", action: "No action needed. You will be notified when it is ready for your review." },
+  SOW_APPROVAL: { what: "Your Statement of Work is ready for review and signature.", action: "Please review the SOW document and sign it to proceed." },
+  SOW_SIGNED: { what: "SOW signed — procurement is next.", action: "Please issue a Purchase Order referencing the SOW to authorize work to begin." },
+  PO_REQUESTED: { what: "We are awaiting your Purchase Order.", action: "Please upload your PO document or provide the PO number to unblock the engagement." },
+  PO_RECEIVED: { what: "PO received — we are assembling your team.", action: "No action needed. Resource assignment is in progress." },
+  RESOURCE_ASSIGNED: { what: "Your team has been assigned and is being onboarded.", action: "Expect an introduction from your assigned team lead shortly." },
+  HANDED_TO_OPERATIONS: { what: "Your engagement is live and in active delivery.", action: "Contact your team lead for any operational matters." },
+  CLOSED_SUCCESS: { what: "This engagement has been successfully closed.", action: "Thank you for working with KGR. Please reach out if you need further support." },
+  CANCELLED: { what: "This request has been cancelled.", action: "Please submit a new request if you wish to restart." },
+};
 
 export default async function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireAuth();
@@ -41,6 +62,10 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       },
       invoiceMilestones: { orderBy: { dueDate: "asc" } },
       changeRequests: { select: { id: true } },
+      resources: {
+        include: { user: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -54,6 +79,78 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   };
+
+  const p = project as unknown as {
+    requestingDepartment?: string | null;
+    businessOwner?: string | null;
+    businessOwnerEmail?: string | null;
+    businessJustification?: string | null;
+    incumbentVendor?: string | null;
+    complianceNotes?: string | null;
+    contractType?: string | null;
+    dataClassification?: string | null;
+    budgetRangeMin?: number | null;
+    budgetRangeMax?: number | null;
+    goLiveDeadline?: Date | null;
+    requiredLanguages?: string | null;
+    estimatedMonthlyTickets?: number | null;
+    avgHandleTimeMinutes?: number | null;
+    estimatedAssetCount?: number | null;
+    itsmPlatform?: string | null;
+    priority?: string | null;
+    urgency?: string | null;
+    numberOfFtes?: number | null;
+    coverageModel?: string | null;
+    workplaceModel?: string | null;
+    poValue?: number | null;
+    poExpiryDate?: Date | null;
+    invoicedAmount?: number | null;
+    poCurrency?: string | null;
+    paymentTermsDays?: number | null;
+    msaReference?: string | null;
+    serviceTier?: string | null;
+    transitionPeriodWeeks?: number | null;
+    transitionNotes?: string | null;
+    incumbentContractExpiry?: Date | null;
+    incumbentCooperative?: boolean | null;
+    technicalContactName?: string | null;
+    technicalContactEmail?: string | null;
+    procurementContactName?: string | null;
+    procurementContactEmail?: string | null;
+    closureNotes?: string | null;
+    invoiceMilestones: {
+      id: string; description: string; amount: number; dueDate: Date | null;
+      invoicedAt: Date | null; paidAt: Date | null; status: string;
+      invoiceNumber?: string | null; currency?: string | null;
+      taxRate?: number | null; taxAmount?: number | null;
+    }[];
+    resources: {
+      id: string; projectId: string; userId: string | null;
+      user: { name: string; email: string } | null;
+      roleName: string; dailyRate: number; currency: string;
+      startDate: Date | null; endDate: Date | null; isLead: boolean; notes: string | null;
+      bgCheckStatus?: string | null; shiftPattern?: string | null;
+      externalResourceName?: string | null; externalResourceEmail?: string | null;
+    }[];
+  };
+
+  const isClient = user.role === "CLIENT";
+  const isPMO = ["PMO_LEAD", "PMO_TEAM", "SUPER_ADMIN"].includes(user.role);
+
+  // Client timeline: determine milestones
+  const sowSignedStatuses = ["SOW_SIGNED","PO_REQUESTED","PO_RECEIVED","RESOURCE_ASSIGNED","HANDED_TO_OPERATIONS","CLOSED_SUCCESS"];
+  const showClientTimeline = isClient && sowSignedStatuses.includes(project.status);
+  const earliestResourceStart = p.resources.length > 0
+    ? p.resources.reduce((earliest, r) => {
+        if (!r.startDate) return earliest;
+        return (!earliest || new Date(r.startDate) < new Date(earliest)) ? r.startDate.toISOString() : earliest;
+      }, null as string | null)
+    : null;
+
+  const showYourTeam = isClient && ["RESOURCE_ASSIGNED","HANDED_TO_OPERATIONS","CLOSED_SUCCESS"].includes(project.status);
+  const showClientInvoices = isClient && ["PO_RECEIVED","RESOURCE_ASSIGNED","HANDED_TO_OPERATIONS","CLOSED_SUCCESS"].includes(project.status);
+
+  const clientHint = isClient ? CLIENT_STATUS_HINTS[project.status] : null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-5">
@@ -83,6 +180,49 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           </div>
         </div>
       </div>
+
+      {/* Client status hint */}
+      {clientHint && (
+        <div className="flex gap-3 p-4 rounded-xl bg-blue-50 border border-blue-200">
+          <Info size={18} className="text-blue-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-blue-800">{clientHint.what}</p>
+            <p className="text-sm font-600 text-blue-900 mt-0.5">{clientHint.action}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Client Delivery Timeline */}
+      {showClientTimeline && (
+        <Card>
+          <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Delivery Timeline</p>
+          <div className="flex items-start gap-0 overflow-x-auto">
+            {[
+              { label: "SOW Signed", date: project.statusHistory.find(h => h.toStatus === "SOW_SIGNED")?.changedAt ?? null, active: true },
+              { label: "Resource Start", date: earliestResourceStart ? new Date(earliestResourceStart) : null, active: !!earliestResourceStart },
+              { label: "Go-Live", date: p.goLiveDeadline ?? project.anticipatedStartDate, active: true },
+              { label: "Engagement End", date: project.anticipatedEndDate, active: true },
+            ].map((milestone, idx, arr) => (
+              <div key={milestone.label} className="flex items-center flex-shrink-0">
+                <div className="flex flex-col items-center min-w-[100px]">
+                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${
+                    milestone.active ? "bg-[#1a1f5e] border-[#1a1f5e]" : "bg-white border-gray-300"
+                  }`} />
+                  <p className="text-xs font-600 text-[#1a1f5e] mt-2 text-center">{milestone.label}</p>
+                  {milestone.date && (
+                    <p className="text-[10px] text-gray-400 text-center">
+                      {format(new Date(milestone.date), "MMM d, yyyy")}
+                    </p>
+                  )}
+                </div>
+                {idx < arr.length - 1 && (
+                  <div className="h-0.5 w-16 bg-[#e2e4f0] flex-shrink-0 -mt-6" />
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Timeline */}
       <Card>
@@ -122,65 +262,64 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             </div>
           </Card>
 
-          {/* Business Context card — only show if at least one field is set */}
+          {/* Business Context card */}
           {(() => {
-            const p = project as unknown as {
-              requestingDepartment?: string | null;
-              businessOwner?: string | null;
-              businessOwnerEmail?: string | null;
-              businessJustification?: string | null;
-              incumbentVendor?: string | null;
-              complianceNotes?: string | null;
-              contractType?: string | null;
-              dataClassification?: string | null;
-              budgetRangeMin?: number | null;
-              budgetRangeMax?: number | null;
-              goLiveDeadline?: Date | null;
-              requiredLanguages?: string | null;
-              estimatedMonthlyTickets?: number | null;
-              avgHandleTimeMinutes?: number | null;
-              estimatedAssetCount?: number | null;
-              itsmPlatform?: string | null;
-            };
             const hasAny = p.requestingDepartment || p.businessOwner || p.businessJustification ||
               p.incumbentVendor || p.complianceNotes || p.contractType || p.dataClassification ||
               p.budgetRangeMin != null || p.budgetRangeMax != null || p.businessOwnerEmail ||
               p.goLiveDeadline || p.requiredLanguages || p.estimatedMonthlyTickets != null ||
-              p.avgHandleTimeMinutes != null || p.estimatedAssetCount != null || p.itsmPlatform;
+              p.avgHandleTimeMinutes != null || p.estimatedAssetCount != null || p.itsmPlatform ||
+              p.technicalContactName || p.procurementContactName || p.msaReference || p.serviceTier ||
+              p.transitionPeriodWeeks != null || p.incumbentContractExpiry;
             if (!hasAny) return null;
             return (
               <Card>
                 <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Business Context</p>
                 <div className="space-y-3">
                   {p.requestingDepartment && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Requesting Department</p>
-                      <p className="text-sm text-gray-800">{p.requestingDepartment}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Requesting Department</p><p className="text-sm text-gray-800">{p.requestingDepartment}</p></div>
                   )}
                   {p.businessOwner && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Business Owner / Sponsor</p>
-                      <p className="text-sm text-gray-800">{p.businessOwner}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Business Owner / Sponsor</p><p className="text-sm text-gray-800">{p.businessOwner}</p></div>
                   )}
                   {p.businessOwnerEmail && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Business Owner Email</p>
-                      <p className="text-sm text-gray-800">{p.businessOwnerEmail}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Business Owner Email</p><p className="text-sm text-gray-800">{p.businessOwnerEmail}</p></div>
                   )}
                   {p.businessJustification && (
+                    <div><p className="text-xs text-gray-500 mb-1">Business Justification</p><p className="text-sm text-gray-800">{p.businessJustification}</p></div>
+                  )}
+                  {/* Contacts & Governance */}
+                  {(p.technicalContactName || p.technicalContactEmail) && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Business Justification</p>
-                      <p className="text-sm text-gray-800">{p.businessJustification}</p>
+                      <p className="text-xs text-gray-500 mb-1">Technical Contact</p>
+                      <p className="text-sm text-gray-800">{p.technicalContactName}{p.technicalContactEmail && ` · ${p.technicalContactEmail}`}</p>
+                    </div>
+                  )}
+                  {(p.procurementContactName || p.procurementContactEmail) && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Procurement Contact</p>
+                      <p className="text-sm text-gray-800">{p.procurementContactName}{p.procurementContactEmail && ` · ${p.procurementContactEmail}`}</p>
+                    </div>
+                  )}
+                  {p.msaReference && (
+                    <div><p className="text-xs text-gray-500 mb-1">MSA / Contract Reference</p><p className="text-sm text-gray-800">{p.msaReference}</p></div>
+                  )}
+                  {p.serviceTier && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Service Tier</p>
+                      <span
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-600"
+                        style={{
+                          backgroundColor: (SERVICE_TIER_COLORS[p.serviceTier] ?? "#6b7280") + "18",
+                          color: SERVICE_TIER_COLORS[p.serviceTier] ?? "#6b7280",
+                        }}
+                      >
+                        {SERVICE_TIER_LABELS[p.serviceTier] ?? p.serviceTier}
+                      </span>
                     </div>
                   )}
                   {p.contractType && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Contract Type</p>
-                      <p className="text-sm text-gray-800">{CONTRACT_TYPE_LABELS[p.contractType] ?? p.contractType}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Contract Type</p><p className="text-sm text-gray-800">{CONTRACT_TYPE_LABELS[p.contractType] ?? p.contractType}</p></div>
                   )}
                   {p.dataClassification && (
                     <div>
@@ -201,57 +340,91 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     </div>
                   )}
                   {p.goLiveDeadline && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Go-Live Deadline</p>
-                      <p className="text-sm text-gray-800">{format(new Date(p.goLiveDeadline), "MMM d, yyyy")}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Go-Live Deadline</p><p className="text-sm text-gray-800">{format(new Date(p.goLiveDeadline), "MMM d, yyyy")}</p></div>
                   )}
                   {p.incumbentVendor && (
+                    <div><p className="text-xs text-gray-500 mb-1">Incumbent Vendor</p><p className="text-sm text-gray-800">{p.incumbentVendor}</p></div>
+                  )}
+                  {p.incumbentContractExpiry && (
+                    <div><p className="text-xs text-gray-500 mb-1">Incumbent Contract Expiry</p><p className="text-sm text-gray-800">{format(new Date(p.incumbentContractExpiry), "MMM d, yyyy")}</p></div>
+                  )}
+                  {p.incumbentCooperative != null && (
+                    <div><p className="text-xs text-gray-500 mb-1">Incumbent Cooperative?</p><p className="text-sm text-gray-800">{p.incumbentCooperative ? "Yes" : "No"}</p></div>
+                  )}
+                  {p.transitionPeriodWeeks != null && p.transitionPeriodWeeks > 0 && (
                     <div>
-                      <p className="text-xs text-gray-500 mb-1">Incumbent Vendor</p>
-                      <p className="text-sm text-gray-800">{p.incumbentVendor}</p>
+                      <p className="text-xs text-gray-500 mb-1">Transition Period</p>
+                      <p className="text-sm text-gray-800">{p.transitionPeriodWeeks} week{p.transitionPeriodWeeks !== 1 ? "s" : ""}</p>
+                      {p.transitionNotes && <p className="text-xs text-gray-500 mt-0.5 italic">{p.transitionNotes}</p>}
                     </div>
                   )}
                   {p.complianceNotes && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Compliance Requirements</p>
-                      <p className="text-sm text-gray-800">{p.complianceNotes}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Compliance Requirements</p><p className="text-sm text-gray-800">{p.complianceNotes}</p></div>
                   )}
                   {p.requiredLanguages && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Required Languages</p>
-                      <p className="text-sm text-gray-800">{p.requiredLanguages}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Required Languages</p><p className="text-sm text-gray-800">{p.requiredLanguages}</p></div>
                   )}
                   {p.estimatedMonthlyTickets != null && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Est. Monthly Ticket Volume</p>
-                      <p className="text-sm text-gray-800">{p.estimatedMonthlyTickets.toLocaleString()}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Est. Monthly Ticket Volume</p><p className="text-sm text-gray-800">{p.estimatedMonthlyTickets.toLocaleString()}</p></div>
                   )}
                   {p.avgHandleTimeMinutes != null && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Avg Handle Time</p>
-                      <p className="text-sm text-gray-800">{p.avgHandleTimeMinutes} min</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Avg Handle Time</p><p className="text-sm text-gray-800">{p.avgHandleTimeMinutes} min</p></div>
                   )}
                   {p.itsmPlatform && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">ITSM Platform</p>
-                      <p className="text-sm text-gray-800">{ITSM_PLATFORM_LABELS[p.itsmPlatform] ?? p.itsmPlatform}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">ITSM Platform</p><p className="text-sm text-gray-800">{ITSM_PLATFORM_LABELS[p.itsmPlatform] ?? p.itsmPlatform}</p></div>
                   )}
                   {p.estimatedAssetCount != null && (
-                    <div>
-                      <p className="text-xs text-gray-500 mb-1">Est. Asset / Device Count</p>
-                      <p className="text-sm text-gray-800">{p.estimatedAssetCount.toLocaleString()}</p>
-                    </div>
+                    <div><p className="text-xs text-gray-500 mb-1">Est. Asset / Device Count</p><p className="text-sm text-gray-800">{p.estimatedAssetCount.toLocaleString()}</p></div>
                   )}
                 </div>
               </Card>
             );
           })()}
+
+          {/* Your Team (CLIENT only, post-assignment) */}
+          {showYourTeam && p.resources.length > 0 && (
+            <Card>
+              <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Your Team</p>
+              <div className="space-y-3">
+                {p.resources.map((r) => {
+                  const name = (r as unknown as { externalResourceName?: string | null }).externalResourceName ?? r.user?.name ?? "(unassigned)";
+                  const bgCheck = (r as unknown as { bgCheckStatus?: string | null }).bgCheckStatus;
+                  const shift = (r as unknown as { shiftPattern?: string | null }).shiftPattern;
+                  return (
+                    <div key={r.id} className="flex items-start gap-3 p-3 rounded-xl border border-[#e2e4f0]">
+                      <div className="w-9 h-9 rounded-full bg-[#1a1f5e]/10 flex items-center justify-center text-[#1a1f5e] font-700 text-sm flex-shrink-0">
+                        {name.charAt(0)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-600 text-[#1a1f5e]">{name}</p>
+                          {r.isLead && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-600 bg-amber-100 text-amber-700">
+                              <Star size={9} fill="currentColor" />Lead
+                            </span>
+                          )}
+                          {bgCheck === "CLEARED" && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-600 bg-green-100 text-green-700">
+                              <CheckCircle2 size={10} />Cleared
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">{r.roleName}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          {shift && (
+                            <p className="text-xs text-gray-400">{SHIFT_PATTERN_LABELS[shift] ?? shift}</p>
+                          )}
+                          {r.startDate && (
+                            <p className="text-xs text-gray-400">Starts {format(new Date(r.startDate), "MMM d, yyyy")}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* Documents */}
           <Card>
@@ -282,6 +455,29 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             )}
           </Card>
 
+          {/* Client read-only invoices */}
+          {showClientInvoices && (
+            <Card>
+              <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Invoice Milestones</p>
+              {p.invoiceMilestones.length === 0 ? (
+                <p className="text-sm text-gray-400">No invoice milestones yet.</p>
+              ) : (
+                <InvoiceMilestonesPanel
+                  projectId={project.id}
+                  userRole={user.role}
+                  readOnly={true}
+                  initialMilestones={p.invoiceMilestones.map((m) => ({
+                    ...m,
+                    projectId: project.id,
+                    dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+                    invoicedAt: m.invoicedAt ? m.invoicedAt.toISOString() : null,
+                    paidAt: m.paidAt ? m.paidAt.toISOString() : null,
+                  }))}
+                />
+              )}
+            </Card>
+          )}
+
           {/* Comments / Collaboration */}
           <Card>
             <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Updates & Collaboration</p>
@@ -311,8 +507,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   <div className="flex-shrink-0 mt-1 w-2 h-2 rounded-full bg-[#1a1f5e]" />
                   <div className="min-w-0">
                     <p className="text-sm text-gray-800">
-                      <span className="font-600">{h.toStatus.replace(/_/g, " ")}</span>
-                      {h.fromStatus && <span className="text-gray-400"> from {h.fromStatus.replace(/_/g, " ")}</span>}
+                      <span className="font-600">{STATUS_LABELS[h.toStatus] ?? h.toStatus.replace(/_/g, " ")}</span>
+                      {h.fromStatus && <span className="text-gray-400"> from {STATUS_LABELS[h.fromStatus] ?? h.fromStatus.replace(/_/g, " ")}</span>}
                     </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className="text-xs text-gray-400">{format(new Date(h.changedAt), "MMM d, yyyy 'at' h:mm a")}</p>
@@ -353,8 +549,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <span className="text-gray-400 mt-0.5 flex-shrink-0"><AlertTriangle size={14} /></span>
                 <div className="min-w-0">
                   <p className="text-[11px] text-gray-400">Priority</p>
-                  <p className="text-sm font-500 truncate" style={{ color: PRIORITY_COLORS[(project as unknown as {priority?: string}).priority ?? "MEDIUM"] ?? "#2563eb" }}>
-                    {PRIORITY_LABELS[(project as unknown as {priority?: string}).priority ?? "MEDIUM"] ?? (project as unknown as {priority?: string}).priority}
+                  <p className="text-sm font-500 truncate" style={{ color: PRIORITY_COLORS[p.priority ?? "MEDIUM"] ?? "#2563eb" }}>
+                    {PRIORITY_LABELS[p.priority ?? "MEDIUM"] ?? p.priority}
                   </p>
                 </div>
               </div>
@@ -364,7 +560,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <div className="min-w-0">
                   <p className="text-[11px] text-gray-400">Urgency</p>
                   <p className="text-sm font-500 text-gray-800 truncate">
-                    {URGENCY_LABELS[(project as unknown as {urgency?: string}).urgency ?? "STANDARD"] ?? (project as unknown as {urgency?: string}).urgency}
+                    {URGENCY_LABELS[p.urgency ?? "STANDARD"] ?? p.urgency}
                   </p>
                 </div>
               </div>
@@ -374,9 +570,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <div className="min-w-0">
                   <p className="text-[11px] text-gray-400">FTEs</p>
                   <p className="text-sm font-500 text-gray-800 truncate">
-                    {(project as unknown as {numberOfFtes?: number | null}).numberOfFtes
-                      ? `${(project as unknown as {numberOfFtes: number}).numberOfFtes} FTE${(project as unknown as {numberOfFtes: number}).numberOfFtes > 1 ? "s" : ""}`
-                      : "—"}
+                    {p.numberOfFtes ? `${p.numberOfFtes} FTE${p.numberOfFtes > 1 ? "s" : ""}` : "—"}
                   </p>
                 </div>
               </div>
@@ -386,7 +580,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <div className="min-w-0">
                   <p className="text-[11px] text-gray-400">Coverage</p>
                   <p className="text-sm font-500 text-gray-800 truncate">
-                    {COVERAGE_MODEL_LABELS[(project as unknown as {coverageModel?: string | null}).coverageModel ?? ""] ?? "—"}
+                    {COVERAGE_MODEL_LABELS[p.coverageModel ?? ""] ?? "—"}
                   </p>
                 </div>
               </div>
@@ -396,7 +590,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 <div className="min-w-0">
                   <p className="text-[11px] text-gray-400">Workplace</p>
                   <p className="text-sm font-500 text-gray-800 truncate">
-                    {WORKPLACE_MODEL_LABELS[(project as unknown as {workplaceModel?: string | null}).workplaceModel ?? ""] ?? "—"}
+                    {WORKPLACE_MODEL_LABELS[p.workplaceModel ?? ""] ?? "—"}
                   </p>
                 </div>
               </div>
@@ -427,80 +621,82 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             userId={user.id}
           />
 
-          {/* Commercial card — PMO_LEAD / SUPER_ADMIN only, when PO or estimated cost exists */}
-          {["PMO_LEAD", "SUPER_ADMIN"].includes(user.role) &&
-            ((project as unknown as { poValue?: number | null }).poValue != null || project.estimatedCost != null) && (() => {
-              const p = project as unknown as {
-                poValue?: number | null;
-                poExpiryDate?: Date | null;
-                invoicedAmount?: number | null;
-                invoiceMilestones: { id: string; description: string; amount: number; dueDate: Date | null; invoicedAt: Date | null; paidAt: Date | null; status: string }[];
-              };
-              const poValue = p.poValue;
-              const estimatedCost = project.estimatedCost;
-              const delta = poValue != null && estimatedCost != null ? poValue - estimatedCost : null;
-              return (
-                <Card>
-                  <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-3">Commercial</p>
-                  <div className="space-y-2 mb-4">
-                    {estimatedCost != null && (
-                      <div className="flex items-start gap-2">
-                        <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-[11px] text-gray-400">Estimated Cost</p>
-                          <p className="text-sm font-600 text-gray-800">${estimatedCost.toLocaleString()}</p>
+          {/* Commercial card — PMO only */}
+          {isPMO && (p.poValue != null || project.estimatedCost != null) && (() => {
+            const poValue = p.poValue;
+            const estimatedCost = project.estimatedCost;
+            const delta = poValue != null && estimatedCost != null ? poValue - estimatedCost : null;
+            return (
+              <Card>
+                <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-3">Commercial</p>
+                <div className="space-y-2 mb-4">
+                  {estimatedCost != null && (
+                    <div className="flex items-start gap-2">
+                      <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-gray-400">Estimated Cost</p>
+                        <p className="text-sm font-600 text-gray-800">${estimatedCost.toLocaleString()}</p>
+                      </div>
+                    </div>
+                  )}
+                  {poValue != null && (
+                    <div className="flex items-start gap-2">
+                      <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-gray-400">PO Value</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-700 text-[#1a1f5e]">{p.poCurrency ?? "USD"} {poValue.toLocaleString()}</p>
+                          {delta != null && (
+                            <span className={`text-xs font-600 ${delta >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {delta >= 0 ? "+" : ""}${delta.toLocaleString()}
+                            </span>
+                          )}
                         </div>
                       </div>
-                    )}
-                    {poValue != null && (
-                      <div className="flex items-start gap-2">
-                        <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-[11px] text-gray-400">PO Value</p>
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-700 text-[#1a1f5e]">${poValue.toLocaleString()}</p>
-                            {delta != null && (
-                              <span className={`text-xs font-600 ${delta >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                {delta >= 0 ? "+" : ""}${delta.toLocaleString()}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                    </div>
+                  )}
+                  {p.paymentTermsDays != null && (
+                    <div className="flex items-start gap-2">
+                      <Clock size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-gray-400">Payment Terms</p>
+                        <p className="text-sm font-500 text-gray-800">Net {p.paymentTermsDays}</p>
                       </div>
-                    )}
-                    {p.poExpiryDate && (
-                      <div className="flex items-start gap-2">
-                        <Calendar size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-[11px] text-gray-400">PO Expiry</p>
-                          <p className="text-sm font-500 text-gray-800">{format(new Date(p.poExpiryDate), "MMM d, yyyy")}</p>
-                        </div>
+                    </div>
+                  )}
+                  {p.poExpiryDate && (
+                    <div className="flex items-start gap-2">
+                      <Calendar size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-gray-400">PO Expiry</p>
+                        <p className="text-sm font-500 text-gray-800">{format(new Date(p.poExpiryDate), "MMM d, yyyy")}</p>
                       </div>
-                    )}
-                    {(p.invoicedAmount ?? 0) > 0 && (
-                      <div className="flex items-start gap-2">
-                        <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-[11px] text-gray-400">Total Invoiced</p>
-                          <p className="text-sm font-700 text-blue-700">${(p.invoicedAmount ?? 0).toLocaleString()}</p>
-                        </div>
+                    </div>
+                  )}
+                  {(p.invoicedAmount ?? 0) > 0 && (
+                    <div className="flex items-start gap-2">
+                      <DollarSign size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-[11px] text-gray-400">Total Invoiced</p>
+                        <p className="text-sm font-700 text-blue-700">${(p.invoicedAmount ?? 0).toLocaleString()}</p>
                       </div>
-                    )}
-                  </div>
-                  <InvoiceMilestonesPanel
-                    projectId={project.id}
-                    userRole={user.role}
-                    initialMilestones={p.invoiceMilestones.map((m) => ({
-                      ...m,
-                      projectId: project.id,
-                      dueDate: m.dueDate ? m.dueDate.toISOString() : null,
-                      invoicedAt: m.invoicedAt ? m.invoicedAt.toISOString() : null,
-                      paidAt: m.paidAt ? m.paidAt.toISOString() : null,
-                    }))}
-                  />
-                </Card>
-              );
-            })()}
+                    </div>
+                  )}
+                </div>
+                <InvoiceMilestonesPanel
+                  projectId={project.id}
+                  userRole={user.role}
+                  initialMilestones={p.invoiceMilestones.map((m) => ({
+                    ...m,
+                    projectId: project.id,
+                    dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+                    invoicedAt: m.invoicedAt ? m.invoicedAt.toISOString() : null,
+                    paidAt: m.paidAt ? m.paidAt.toISOString() : null,
+                  }))}
+                />
+              </Card>
+            );
+          })()}
 
           {(user.role === "SUPER_ADMIN" || user.role === "PMO_LEAD") && (
             <EditProjectModal
@@ -513,18 +709,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 anticipatedEndDate: project.anticipatedEndDate.toISOString(),
                 ragStatus: project.ragStatus,
                 notes: project.notes,
-                closureNotes: (project as unknown as { closureNotes?: string | null }).closureNotes,
-                priority: (project as unknown as { priority?: string }).priority,
-                urgency: (project as unknown as { urgency?: string }).urgency,
-                numberOfFtes: (project as unknown as { numberOfFtes?: number | null }).numberOfFtes,
-                coverageModel: (project as unknown as { coverageModel?: string | null }).coverageModel,
-                workplaceModel: (project as unknown as { workplaceModel?: string | null }).workplaceModel,
+                closureNotes: p.closureNotes ?? undefined,
+                priority: p.priority ?? undefined,
+                urgency: p.urgency ?? undefined,
+                numberOfFtes: p.numberOfFtes,
+                coverageModel: p.coverageModel ?? undefined,
+                workplaceModel: p.workplaceModel ?? undefined,
               }}
               userRole={user.role}
             />
           )}
 
-          {/* AI Insights — shown to all roles if project is not closed/cancelled */}
+          {/* AI Insights */}
           {!["CLOSED_SUCCESS", "CANCELLED"].includes(project.status) && (
             <AIInsightsPanel
               projectId={project.id}

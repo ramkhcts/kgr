@@ -41,6 +41,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     overrideReason,
     poValue,
     poExpiryDate,
+    poCurrency,
+    paymentTermsDays,
   } = body;
 
   const project = await prisma.project.findUnique({
@@ -198,9 +200,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (poValue) updateData.poValue = parseFloat(poValue);
     updateData.poReceivedDate = new Date();
     if (poExpiryDate) updateData.poExpiryDate = new Date(poExpiryDate);
+    if (poCurrency) updateData.poCurrency = poCurrency;
+    if (paymentTermsDays != null) updateData.paymentTermsDays = parseInt(paymentTermsDays);
   }
 
   const updated = await prisma.project.update({ where: { id }, data: updateData });
+
+  // PO expiry alert: if poExpiryDate within 30 days and project active, bump RAG to AMBER
+  try {
+    const refreshed = updated as unknown as { poExpiryDate?: Date | null; ragStatus?: string; status?: string };
+    if (refreshed.poExpiryDate) {
+      const expiryMs = new Date(refreshed.poExpiryDate).getTime() - Date.now();
+      const expiryDays = expiryMs / (1000 * 60 * 60 * 24);
+      const isOpen = !["CLOSED_SUCCESS", "CANCELLED"].includes(updated.status);
+      if (isOpen && expiryDays <= 30 && expiryDays >= 0 && updated.ragStatus === "GREEN") {
+        await prisma.project.update({ where: { id }, data: { ragStatus: "AMBER" } });
+      }
+    }
+  } catch { /* fire-and-forget, non-critical */ }
 
   await prisma.statusHistory.create({
     data: { projectId: id, fromStatus: currentStatus, toStatus, changedById: user.id, notes: notes || null },

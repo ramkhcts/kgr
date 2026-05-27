@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const body = await req.json();
-  const { description, amount, dueDate } = body;
+  const { description, amount, dueDate, invoiceNumber, currency, taxRate, taxAmount } = body;
 
   if (!description || amount === undefined) {
     return NextResponse.json({ error: "description and amount are required" }, { status: 400 });
@@ -43,6 +43,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       description,
       amount: parseFloat(amount),
       dueDate: dueDate ? new Date(dueDate) : null,
+      invoiceNumber: invoiceNumber || null,
+      currency: currency || "USD",
+      taxRate: taxRate != null ? parseFloat(taxRate) : 0,
+      taxAmount: taxAmount != null ? parseFloat(taxAmount) : 0,
     },
   });
 

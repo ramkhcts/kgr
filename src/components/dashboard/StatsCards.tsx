@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TrendingUp, Clock, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
+import { TrendingUp, Clock, AlertTriangle, CheckCircle2, ArrowRight, Target } from "lucide-react";
 
 interface StatsCardsProps {
   total: number;
@@ -7,6 +7,7 @@ interface StatsCardsProps {
   needsAction: number;
   closedThisMonth: number;
   slaBreached?: number;
+  onTimeRate?: number;
 }
 
 const CARDS = [
@@ -53,9 +54,9 @@ const SLA_CARD_CONFIG = {
 };
 
 export function StatsCards(props: StatsCardsProps) {
-  const colClass = props.slaBreached !== undefined
-    ? "grid grid-cols-2 lg:grid-cols-5 gap-4"
-    : "grid grid-cols-2 lg:grid-cols-4 gap-4";
+  const extraCount = (props.slaBreached !== undefined ? 1 : 0) + (props.onTimeRate !== undefined ? 1 : 0);
+  const totalCols = 4 + extraCount;
+  const colClass = `grid grid-cols-2 lg:grid-cols-${totalCols} gap-4`;
 
   return (
     <div className={colClass}>
@@ -120,6 +121,28 @@ export function StatsCards(props: StatsCardsProps) {
               />
             </div>
           </Link>
+        );
+      })()}
+
+      {props.onTimeRate !== undefined && (() => {
+        const rate = props.onTimeRate ?? 0;
+        const color = rate >= 80 ? "#16a34a" : rate >= 60 ? "#d97706" : "#dc2626";
+        return (
+          <div className="card-elevated p-5">
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className="text-xs text-gray-500 font-500 uppercase tracking-wide">On-Time Delivery</p>
+                <p className="text-3xl font-800 mt-1" style={{ color }}>{rate}%</p>
+              </div>
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ backgroundColor: color + "15", color }}
+              >
+                <Target size={20} />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Closed projects within deadline</p>
+          </div>
         );
       })()}
     </div>

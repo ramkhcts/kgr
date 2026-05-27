@@ -39,11 +39,24 @@ export default async function ResourcesPage({ params }: { params: Promise<{ id: 
     orderBy: { roleName: "asc" },
   });
 
+  const READONLY_STATUSES = ["HANDED_TO_OPERATIONS", "CLOSED_SUCCESS", "CLOSED_REJECTED", "CANCELLED"];
+  const isReadOnly = READONLY_STATUSES.includes(project.status);
+
   // Serialize dates for client components
   const serializedResources = project.resources.map((r) => ({
     ...r,
     startDate: r.startDate ? r.startDate.toISOString() : null,
     endDate: r.endDate ? r.endDate.toISOString() : null,
+    rampUpEndDate: (r as unknown as { rampUpEndDate?: Date | null }).rampUpEndDate
+      ? new Date((r as unknown as { rampUpEndDate: Date }).rampUpEndDate).toISOString()
+      : null,
+    rampDownStartDate: (r as unknown as { rampDownStartDate?: Date | null }).rampDownStartDate
+      ? new Date((r as unknown as { rampDownStartDate: Date }).rampDownStartDate).toISOString()
+      : null,
+    bgCheckStatus: (r as unknown as { bgCheckStatus?: string | null }).bgCheckStatus ?? null,
+    shiftPattern: (r as unknown as { shiftPattern?: string | null }).shiftPattern ?? null,
+    externalResourceName: (r as unknown as { externalResourceName?: string | null }).externalResourceName ?? null,
+    externalResourceEmail: (r as unknown as { externalResourceEmail?: string | null }).externalResourceEmail ?? null,
     createdAt: r.createdAt.toISOString(),
     updatedAt: r.updatedAt.toISOString(),
   }));
@@ -68,6 +81,7 @@ export default async function ResourcesPage({ params }: { params: Promise<{ id: 
           team={team}
           initialResources={serializedResources}
           rateCards={rateCards}
+          readOnly={isReadOnly}
         />
       </Card>
     </div>

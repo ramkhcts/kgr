@@ -189,6 +189,38 @@ export default async function DashboardPage() {
     avgDays: durations.reduce((a, b) => a + b, 0) / durations.length,
   }));
 
+  // On-time delivery rate (PMO only)
+  let onTimeRate: number | null = null;
+  let financialSummary: { totalPO: number; totalInvoiced: number; totalPaid: number } | null = null;
+
+  if (["PMO_LEAD", "SUPER_ADMIN"].includes(user.role)) {
+    const closedProjects = await prisma.project.findMany({
+      where: { status: "CLOSED_SUCCESS" },
+      select: { updatedAt: true, anticipatedEndDate: true },
+    });
+    const onTimeCount = closedProjects.filter(
+      (cp) => new Date(cp.updatedAt) <= new Date(cp.anticipatedEndDate)
+    ).length;
+    onTimeRate = closedProjects.length > 0
+      ? Math.round((onTimeCount / closedProjects.length) * 100)
+      : null;
+
+    // Financial summary
+    const poSummary = await prisma.project.aggregate({
+      where: { status: { notIn: ["CANCELLED"] } },
+      _sum: { poValue: true, invoicedAmount: true },
+    });
+    const paidSummary = await prisma.invoiceMilestone.aggregate({
+      where: { status: "PAID" },
+      _sum: { amount: true },
+    });
+    financialSummary = {
+      totalPO: poSummary._sum.poValue ?? 0,
+      totalInvoiced: poSummary._sum.invoicedAmount ?? 0,
+      totalPaid: paidSummary._sum.amount ?? 0,
+    };
+  }
+
   const roleLabel: Record<string, string> = {
     CLIENT: "Client",
     PMO_LEAD: "PMO Lead",
@@ -217,6 +249,7 @@ export default async function DashboardPage() {
         needsAction={needsAction}
         closedThisMonth={closedThisMonth}
         slaBreached={slaBreachedCount}
+        onTimeRate={onTimeRate ?? undefined}
       />
 
       {/* Charts row */}
@@ -246,6 +279,27 @@ export default async function DashboardPage() {
         <ScopeRegionBreakdown data={scopeRegionData} />
         <AvgStageTime data={stageTimeData} />
       </div>
+
+      {/* Financial Summary (PMO only) */}
+      {financialSummary && (
+        <div>
+          <p className="text-sm font-700 text-[#1a1f5e] mb-3">Financial Summary</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { label: "Total PO Value Committed", value: financialSummary.totalPO, color: "#1a1f5e" },
+              { label: "Total Invoiced", value: financialSummary.totalInvoiced, color: "#2563eb" },
+              { label: "Total Paid", value: financialSummary.totalPaid, color: "#16a34a" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="card-elevated p-5">
+                <p className="text-xs text-gray-500 font-500 uppercase tracking-wide mb-1">{label}</p>
+                <p className="text-2xl font-800" style={{ color }}>
+                  {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Activity + Projects table */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

@@ -27,7 +27,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const { id } = await params;
   const body = await req.json();
-  const { userId, roleName, dailyRate, currency, startDate, endDate, isLead, notes } = body;
+  const {
+    userId, roleName, dailyRate, currency, startDate, endDate, isLead, notes,
+    bgCheckStatus, shiftPattern, rampUpEndDate, rampDownStartDate,
+    externalResourceName, externalResourceEmail,
+  } = body;
 
   if (!roleName || dailyRate === undefined) {
     return NextResponse.json({ error: "roleName and dailyRate are required" }, { status: 400 });
@@ -51,6 +55,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       endDate: endDate ? new Date(endDate) : null,
       isLead: shouldBeLead,
       notes: notes || null,
+      bgCheckStatus: bgCheckStatus || null,
+      shiftPattern: shiftPattern || null,
+      rampUpEndDate: rampUpEndDate ? new Date(rampUpEndDate) : null,
+      rampDownStartDate: rampDownStartDate ? new Date(rampDownStartDate) : null,
+      externalResourceName: externalResourceName || null,
+      externalResourceEmail: externalResourceEmail || null,
     },
     include: { user: { select: { name: true, email: true } } },
   });

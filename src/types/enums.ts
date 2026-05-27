@@ -170,3 +170,46 @@ export const ITSM_PLATFORM_LABELS: Record<string, string> = {
   OTHER: "Other",
   NONE: "None / To Be Determined",
 };
+
+export const SERVICE_TIER_LABELS: Record<string, string> = {
+  BASIC: "Basic",
+  STANDARD: "Standard",
+  PREMIUM: "Premium",
+  ENTERPRISE: "Enterprise",
+};
+export const SERVICE_TIER_COLORS: Record<string, string> = {
+  BASIC: "#6b7280",
+  STANDARD: "#2563eb",
+  PREMIUM: "#7c3aed",
+  ENTERPRISE: "#d97706",
+};
+export const BG_CHECK_STATUS_LABELS: Record<string, string> = {
+  PENDING: "Pending",
+  IN_PROGRESS: "In Progress",
+  CLEARED: "Cleared",
+  FAILED: "Failed",
+};
+export const SHIFT_PATTERN_LABELS: Record<string, string> = {
+  DAY: "Day (6am–2pm)",
+  EVENING: "Evening (2pm–10pm)",
+  NIGHT: "Night (10pm–6am)",
+  WEEKEND: "Weekend",
+  ROTATING: "Rotating",
+};
+
+export const STATUS_LABELS: Record<string, string> = {
+  SUBMITTED: "Submitted",
+  UNDER_REVIEW: "Under Review",
+  INFO_REQUIRED: "Info Required",
+  SOLUTIONING: "Solutioning",
+  SOW_DRAFT: "SOW Draft",
+  SOW_APPROVAL: "SOW Approval",
+  SOW_SIGNED: "SOW Signed",
+  PO_REQUESTED: "PO Requested",
+  PO_RECEIVED: "PO Received",
+  RESOURCE_ASSIGNED: "Resource Assigned",
+  HANDED_TO_OPERATIONS: "Handed to Operations",
+  CLOSED_SUCCESS: "Closed — Success",
+  CLOSED_REJECTED: "Closed — Rejected",
+  CANCELLED: "Cancelled",
+};

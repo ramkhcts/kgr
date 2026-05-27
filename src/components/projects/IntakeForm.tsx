@@ -19,6 +19,7 @@ import {
   CONTRACT_TYPE_LABELS,
   DATA_CLASSIFICATION_LABELS,
   ITSM_PLATFORM_LABELS,
+  SERVICE_TIER_LABELS,
 } from "@/types/enums";
 
 interface CustomFormField {
@@ -65,12 +66,26 @@ const schema = z.object({
   avgHandleTimeMinutes:    z.number().int().optional(),
   itsmPlatform:            z.enum(["SERVICENOW","JIRA_SERVICE_MANAGEMENT","REMEDY","ZENDESK","FRESHSERVICE","OTHER","NONE"]).optional(),
   estimatedAssetCount:     z.number().int().optional(),
+  // Contacts & Governance
+  technicalContactName:     z.string().optional(),
+  technicalContactEmail:    z.string().email("Invalid email").optional().or(z.literal("")),
+  procurementContactName:   z.string().optional(),
+  procurementContactEmail:  z.string().email("Invalid email").optional().or(z.literal("")),
+  msaReference:             z.string().optional(),
+  serviceTier:              z.enum(["BASIC","STANDARD","PREMIUM","ENTERPRISE"]).optional(),
+  // Transition
+  transitionPeriodWeeks:    z.number().int().min(0).optional(),
+  transitionNotes:          z.string().optional(),
+  incumbentContractExpiry:  z.string().optional(),
+  incumbentCooperative:     z.boolean().optional(),
 }).refine(data => !data.anticipatedEndDate || !data.anticipatedStartDate || new Date(data.anticipatedEndDate) > new Date(data.anticipatedStartDate), {
   message: "End date must be after start date",
   path: ["anticipatedEndDate"],
 });
 
 type FormData = z.infer<typeof schema>;
+
+const SERVICE_TIER_OPTIONS = Object.entries(SERVICE_TIER_LABELS).map(([value, label]) => ({ value, label }));
 
 const SCOPE_OPTIONS = [
   { value: "SITE_SUPPORT_SERVICES", label: "Site Support Services" },
@@ -131,6 +146,9 @@ export function IntakeForm() {
   const watchedRegion   = watch("region");
   const watchedScope    = watch("scopeOfWork");
   const watchedBudget   = watch("budgetAvailable");
+  const watchedIncumbentVendor = watch("incumbentVendor");
+  const watchedTransitionWeeks = watch("transitionPeriodWeeks");
+  const watchedIncumbentCooperative = watch("incumbentCooperative");
   const isServiceDeskOrRCC = watchedScope === "SERVICE_DESK" || watchedScope === "REMOTE_COMMAND_CENTER";
   const isFieldOrSite      = watchedScope === "FIELD_SERVICES" || watchedScope === "SITE_SUPPORT_SERVICES";
   const startDatePast = startDate ? new Date(startDate) < new Date(new Date().toISOString().split("T")[0]) : false;
@@ -196,6 +214,12 @@ export function IntakeForm() {
           itsmPlatform: data.itsmPlatform || undefined,
           goLiveDeadline: data.goLiveDeadline || undefined,
           businessOwnerEmail: data.businessOwnerEmail || undefined,
+          technicalContactEmail: data.technicalContactEmail || undefined,
+          procurementContactEmail: data.procurementContactEmail || undefined,
+          msaReference: data.msaReference || undefined,
+          serviceTier: data.serviceTier || undefined,
+          transitionNotes: data.transitionNotes || undefined,
+          incumbentContractExpiry: data.incumbentContractExpiry || undefined,
         }),
       });
       if (!res.ok) {
@@ -391,6 +415,42 @@ export function IntakeForm() {
           </div>
         )}
 
+        {/* Contacts & Governance section */}
+        <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide col-span-2 mt-2">Contacts &amp; Governance</p>
+
+        <Input
+          label="Technical Contact Name"
+          placeholder="IT lead / CTO name"
+          {...register("technicalContactName")}
+        />
+        <Input
+          label="Technical Contact Email"
+          type="email"
+          error={errors.technicalContactEmail?.message}
+          {...register("technicalContactEmail")}
+        />
+        <Input
+          label="Procurement Contact Name"
+          {...register("procurementContactName")}
+        />
+        <Input
+          label="Procurement Contact Email"
+          type="email"
+          error={errors.procurementContactEmail?.message}
+          {...register("procurementContactEmail")}
+        />
+        <Input
+          label="MSA / Contract Reference"
+          placeholder="Leave blank if no existing agreement"
+          {...register("msaReference")}
+        />
+        <Select
+          label="Service Tier"
+          options={SERVICE_TIER_OPTIONS}
+          placeholder="Select service tier..."
+          {...register("serviceTier")}
+        />
+
         {/* Delivery Model section */}
         <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide col-span-2 mt-2">Delivery Model</p>
 
@@ -423,6 +483,55 @@ export function IntakeForm() {
           placeholder="Leave blank if new deployment"
           {...register("incumbentVendor")}
         />
+
+        <Input
+          label="Transition Period (weeks)"
+          type="number"
+          placeholder="0 if no transition required"
+          min={0}
+          error={errors.transitionPeriodWeeks?.message}
+          {...register("transitionPeriodWeeks", { valueAsNumber: true })}
+        />
+
+        {watchedTransitionWeeks != null && watchedTransitionWeeks > 0 && (
+          <div className="md:col-span-2">
+            <Textarea
+              label="Transition Notes"
+              placeholder="Describe handover requirements from incumbent"
+              rows={2}
+              {...register("transitionNotes")}
+            />
+          </div>
+        )}
+
+        {watchedIncumbentVendor && (
+          <>
+            <Input
+              label="Incumbent Contract Expiry"
+              type="date"
+              {...register("incumbentContractExpiry")}
+            />
+            <div>
+              <label className="block text-xs font-600 text-[#1a1f5e] mb-1">Incumbent Cooperative?</label>
+              <div className="flex gap-2">
+                {[{ value: true, label: "Yes" }, { value: false, label: "No" }].map(({ value, label }) => (
+                  <button
+                    key={String(value)}
+                    type="button"
+                    onClick={() => setValue("incumbentCooperative", value)}
+                    className={`px-4 py-1.5 rounded-full text-xs font-600 border transition-colors ${
+                      watchedIncumbentCooperative === value
+                        ? "bg-[#1a1f5e] text-white border-[#1a1f5e]"
+                        : "bg-white text-gray-600 border-[#e2e4f0] hover:border-[#1a1f5e]"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
 
         <div className="md:col-span-2">
           <Textarea

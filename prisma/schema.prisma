@@ -84,6 +84,20 @@ model Project {
   poCurrency              String?   @default("USD")
   paymentTermsDays        Int?      @default(30)
   actualCostToDate        Float?    @default(0)
+  msaReference            String?
+  serviceTier             String?   // BASIC | STANDARD | PREMIUM | ENTERPRISE
+
+  // Incumbent / transition
+  transitionPeriodWeeks   Int?
+  transitionNotes         String?
+  incumbentContractExpiry DateTime?
+  incumbentCooperative    Boolean?
+
+  // Contacts
+  technicalContactName    String?
+  technicalContactEmail   String?
+  procurementContactName  String?
+  procurementContactEmail String?
 
   // Info request counter
   infoRequestCount        Int       @default(0)
@@ -118,6 +132,12 @@ model ProjectResource {
   endDate   DateTime?
   isLead    Boolean   @default(false)
   notes     String?
+  bgCheckStatus         String?   // PENDING | IN_PROGRESS | CLEARED | FAILED
+  shiftPattern          String?   // DAY | EVENING | NIGHT | WEEKEND | ROTATING
+  rampUpEndDate         DateTime?
+  rampDownStartDate     DateTime?
+  externalResourceName  String?
+  externalResourceEmail String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -132,6 +152,10 @@ model InvoiceMilestone {
   invoicedAt  DateTime?
   paidAt      DateTime?
   status      String    @default("PENDING")
+  invoiceNumber String?
+  currency      String?  @default("USD")
+  taxRate       Float?   @default(0)
+  taxAmount     Float?   @default(0)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }

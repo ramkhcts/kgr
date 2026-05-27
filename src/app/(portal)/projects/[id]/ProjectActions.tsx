@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/Textarea";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { getAvailableTransitions, CANCEL_ALLOWED_ROLES, STATUS_PENDING_WITH } from "@/lib/workflow";
-import { ProjectStatus, UserRole, ROLE_LABELS } from "@/types/enums";
+import { ProjectStatus, UserRole, ROLE_LABELS, STATUS_LABELS } from "@/types/enums";
 import { Card } from "@/components/ui/Card";
 import Link from "next/link";
 import {
@@ -69,6 +69,8 @@ export function ProjectActions({ project, userRole, userId }: {
   const [poValue, setPoValue]           = useState("");
   const [poExpiryDate, setPoExpiryDate] = useState("");
   const [poFile, setPoFile]             = useState<File | null>(null);
+  const [poCurrency, setPoCurrency]     = useState("USD");
+  const [paymentTermsDays, setPaymentTermsDays] = useState("30");
 
   // Closure notes (PMO_LEAD at HANDED_TO_OPERATIONS)
   const [closureNotes, setClosureNotes] = useState("");
@@ -160,6 +162,8 @@ export function ProjectActions({ project, userRole, userId }: {
           ragStatus,
           poValue: poValue ? parseFloat(poValue) : undefined,
           poExpiryDate: poExpiryDate || undefined,
+          poCurrency,
+          paymentTermsDays: paymentTermsDays ? parseInt(paymentTermsDays) : 30,
         }),
       });
       if (res.ok) {
@@ -322,21 +326,47 @@ export function ProjectActions({ project, userRole, userId }: {
                 <PackageCheck size={13} />
                 Submit Purchase Order
               </p>
-              <Input
-                label="PO Value (USD) *"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g. 50000.00"
-                value={poValue}
-                onChange={(e) => setPoValue(e.target.value)}
-              />
-              <Input
-                label="PO Expiry Date"
-                type="date"
-                value={poExpiryDate}
-                onChange={(e) => setPoExpiryDate(e.target.value)}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  label="PO Value *"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 50000.00"
+                  value={poValue}
+                  onChange={(e) => setPoValue(e.target.value)}
+                />
+                <Select
+                  label="Currency"
+                  value={poCurrency}
+                  onChange={(e) => setPoCurrency(e.target.value)}
+                  options={[
+                    { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" },
+                    { value: "GBP", label: "GBP" }, { value: "CAD", label: "CAD" },
+                    { value: "AUD", label: "AUD" }, { value: "SGD", label: "SGD" },
+                    { value: "INR", label: "INR" }, { value: "BRL", label: "BRL" },
+                    { value: "MXN", label: "MXN" }, { value: "JPY", label: "JPY" },
+                  ]}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  label="PO Expiry Date"
+                  type="date"
+                  value={poExpiryDate}
+                  onChange={(e) => setPoExpiryDate(e.target.value)}
+                />
+                <Select
+                  label="Payment Terms"
+                  value={paymentTermsDays}
+                  onChange={(e) => setPaymentTermsDays(e.target.value)}
+                  options={[
+                    { value: "15", label: "Net 15" }, { value: "30", label: "Net 30" },
+                    { value: "45", label: "Net 45" }, { value: "60", label: "Net 60" },
+                    { value: "90", label: "Net 90" },
+                  ]}
+                />
+              </div>
               <Input
                 label="PO Number *"
                 placeholder="e.g. PO-2024-00123"
@@ -378,23 +408,49 @@ export function ProjectActions({ project, userRole, userId }: {
                 Confirm PO Received
               </p>
               <p className="text-xs text-gray-500">
-                Once the client's PO is in hand, enter the PO number to advance the project.
+                Once the client&apos;s PO is in hand, enter the PO number to advance the project.
               </p>
-              <Input
-                label="PO Value (USD) *"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g. 50000.00"
-                value={poValue}
-                onChange={(e) => setPoValue(e.target.value)}
-              />
-              <Input
-                label="PO Expiry Date"
-                type="date"
-                value={poExpiryDate}
-                onChange={(e) => setPoExpiryDate(e.target.value)}
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  label="PO Value *"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 50000.00"
+                  value={poValue}
+                  onChange={(e) => setPoValue(e.target.value)}
+                />
+                <Select
+                  label="Currency"
+                  value={poCurrency}
+                  onChange={(e) => setPoCurrency(e.target.value)}
+                  options={[
+                    { value: "USD", label: "USD" }, { value: "EUR", label: "EUR" },
+                    { value: "GBP", label: "GBP" }, { value: "CAD", label: "CAD" },
+                    { value: "AUD", label: "AUD" }, { value: "SGD", label: "SGD" },
+                    { value: "INR", label: "INR" }, { value: "BRL", label: "BRL" },
+                    { value: "MXN", label: "MXN" }, { value: "JPY", label: "JPY" },
+                  ]}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Input
+                  label="PO Expiry Date"
+                  type="date"
+                  value={poExpiryDate}
+                  onChange={(e) => setPoExpiryDate(e.target.value)}
+                />
+                <Select
+                  label="Payment Terms"
+                  value={paymentTermsDays}
+                  onChange={(e) => setPaymentTermsDays(e.target.value)}
+                  options={[
+                    { value: "15", label: "Net 15" }, { value: "30", label: "Net 30" },
+                    { value: "45", label: "Net 45" }, { value: "60", label: "Net 60" },
+                    { value: "90", label: "Net 90" },
+                  ]}
+                />
+              </div>
               <Input
                 label="PO Number *"
                 placeholder="e.g. PO-2024-00123"
@@ -619,7 +675,7 @@ export function ProjectActions({ project, userRole, userId }: {
               onChange={(e) => setOverrideToStatus(e.target.value)}
             >
               <option value="">Select target status...</option>
-              {allStatuses.map((s) => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+              {allStatuses.map((s) => <option key={s} value={s}>{STATUS_LABELS[s] ?? s.replace(/_/g, " ")}</option>)}
             </select>
           </div>
           <Textarea label="Override Reason *" value={overrideReason} onChange={(e) => setOverrideReason(e.target.value)} placeholder="Explain why this override is necessary..." rows={3} />
