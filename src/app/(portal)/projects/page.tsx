@@ -1,14 +1,12 @@
 import { requireAuth } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
-import { StatusBadge } from "@/components/projects/StatusBadge";
-import { RAGBadge } from "@/components/projects/RAGBadge";
 import Link from "next/link";
-import { PlusCircle, ExternalLink, X } from "lucide-react";
+import { PlusCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { format, startOfMonth, differenceInBusinessDays } from "date-fns";
-import { SCOPE_LABELS, ROLE_LABELS, ProjectStatus, UserRole } from "@/types/enums";
-import { STATUS_PENDING_WITH } from "@/lib/workflow";
+import { startOfMonth } from "date-fns";
+import { ProjectStatus, UserRole } from "@/types/enums";
+import { ProjectsTableClient } from "@/components/projects/ProjectsTableClient";
 
 const ACTIVE_STATUSES = [
   "SUBMITTED","UNDER_REVIEW","INFO_REQUIRED","SOLUTIONING",
@@ -59,12 +57,11 @@ export default async function ProjectsPage({
     select: { projectId: true, changedAt: true },
   });
   const stageAgeMap = Object.fromEntries(
-    latestStatusChanges.map((s) => [s.projectId, s.changedAt])
+    latestStatusChanges.map((s) => [s.projectId, s.changedAt.toISOString()])
   );
 
   // Apply filter
   const monthStart = startOfMonth(new Date());
-  const now = new Date();
 
   const projects = (() => {
     if (filter === "active") {
@@ -92,6 +89,29 @@ export default async function ProjectsPage({
   })();
 
   const filterLabel = FILTER_LABELS[filter];
+
+  // Prepare serializable project data for client component
+  const projectsForClient = projects.map((p) => {
+    const pp = p as typeof p & {
+      slaTargetDate?: Date | null;
+      slaBreached?: boolean;
+    };
+    return {
+      id: p.id,
+      projectName: p.projectName,
+      description: p.description,
+      scopeOfWork: p.scopeOfWork,
+      location: p.location,
+      status: p.status,
+      ragStatus: p.ragStatus,
+      anticipatedStartDate: p.anticipatedStartDate.toISOString(),
+      slaTargetDate: pp.slaTargetDate ? pp.slaTargetDate.toISOString() : null,
+      slaBreached: pp.slaBreached ?? false,
+      submittedBy: p.submittedBy,
+      assignedResource: p.assignedResource,
+      stageChangedAt: stageAgeMap[p.id] ?? null,
+    };
+  });
 
   return (
     <div>
@@ -161,132 +181,15 @@ export default async function ProjectsPage({
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table (client component handles checkboxes + export) */}
       <Card padding={false}>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[#e2e4f0] bg-[#f4f5fb]">
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Project</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Scope</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Location</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Requestor</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Status</th>
-                {user.role !== "CLIENT" && (
-                  <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Stage Age</th>
-                )}
-                {user.role !== "CLIENT" && (
-                  <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">SLA</th>
-                )}
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">RAG</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Assigned To</th>
-                <th className="text-left px-4 py-3 text-xs font-700 text-[#1a1f5e] uppercase tracking-wide">Start Date</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {projects.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="text-center py-16 text-gray-400 text-sm">
-                    {filterLabel
-                      ? `No projects match "${filterLabel}".`
-                      : user.role === "CLIENT"
-                        ? "No requests yet. Submit your first request to get started."
-                        : "No projects found."}
-                    {filterLabel && (
-                      <span className="block mt-2">
-                        <Link href="/projects" className="text-[#1a1f5e] font-600 hover:underline text-xs">
-                          Clear filter →
-                        </Link>
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                projects.map((p, idx) => {
-                  const changedAt = stageAgeMap[p.id];
-                  const stageAgeDays = changedAt ? differenceInBusinessDays(now, changedAt) : null;
-                  const slaTarget = (p as unknown as { slaTargetDate?: Date | null }).slaTargetDate;
-                  const slaBreached = (p as unknown as { slaBreached?: boolean }).slaBreached;
-
-                  // Stage age color
-                  let stageAgeColor = "text-green-600";
-                  if (stageAgeDays != null) {
-                    if (stageAgeDays > 5) stageAgeColor = "text-red-600 font-bold";
-                    else if (stageAgeDays >= 3) stageAgeColor = "text-amber-600";
-                  }
-
-                  // SLA color
-                  let slaColor = "text-gray-400";
-                  let slaLabel = "—";
-                  if (slaTarget) {
-                    const daysUntil = differenceInBusinessDays(new Date(slaTarget), now);
-                    slaLabel = format(new Date(slaTarget), "MMM d");
-                    if (slaBreached || daysUntil < 0) slaColor = "text-red-600 font-600";
-                    else if (daysUntil <= 2) slaColor = "text-amber-600 font-600";
-                    else slaColor = "text-green-600";
-                  }
-
-                  return (
-                    <tr
-                      key={p.id}
-                      className={`border-b border-[#e2e4f0] hover:bg-[#f4f5fb] transition-colors ${idx % 2 === 0 ? "" : "bg-[#fafafa]"}`}
-                    >
-                      <td className="px-4 py-3">
-                        <p className="font-600 text-[#1a1f5e] text-sm leading-tight">{p.projectName}</p>
-                        <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{p.description}</p>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs text-gray-600 whitespace-nowrap">
-                          {SCOPE_LABELS[p.scopeOfWork as keyof typeof SCOPE_LABELS] ?? p.scopeOfWork}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{p.location}</td>
-                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{p.submittedBy.name}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={p.status} />
-                        {(() => {
-                          const pw = STATUS_PENDING_WITH[p.status as ProjectStatus];
-                          if (!pw) return null;
-                          const isMe = pw.roles.some(
-                            (r) => r === user.role || (user.role === "SUPER_ADMIN" && ["PMO_LEAD","PMO_TEAM"].includes(r))
-                          );
-                          return (
-                            <p className={`text-[10px] mt-1 font-500 ${isMe ? "text-amber-600" : "text-gray-400"}`}>
-                              {isMe ? "⚡ Your turn" : `⏳ ${pw.roles.map((r) => ROLE_LABELS[r] ?? r).join(" / ")}`}
-                            </p>
-                          );
-                        })()}
-                      </td>
-                      {user.role !== "CLIENT" && (
-                        <td className={`px-4 py-3 text-xs whitespace-nowrap ${stageAgeColor}`}>
-                          {stageAgeDays != null ? `${stageAgeDays}d` : "—"}
-                        </td>
-                      )}
-                      {user.role !== "CLIENT" && (
-                        <td className={`px-4 py-3 text-xs whitespace-nowrap ${slaColor}`}>
-                          {slaLabel}
-                        </td>
-                      )}
-                      <td className="px-4 py-3 whitespace-nowrap"><RAGBadge status={p.ragStatus} /></td>
-                      <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
-                        {p.assignedResource?.name ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                        {format(new Date(p.anticipatedStartDate), "MMM d, yyyy")}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Link href={`/projects/${p.id}`} className="text-[#1a1f5e] hover:text-[#3d2d8e] transition-colors">
-                          <ExternalLink size={15} />
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        <ProjectsTableClient
+          projects={projectsForClient}
+          userRole={user.role}
+          filterLabel={filterLabel}
+          filter={filter}
+          currentFilter={filter}
+        />
       </Card>
     </div>
   );

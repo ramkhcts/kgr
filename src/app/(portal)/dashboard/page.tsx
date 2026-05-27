@@ -3,13 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { PipelineChart } from "@/components/dashboard/PipelineChart";
 import { RAGDistribution } from "@/components/dashboard/RAGDistribution";
+import { WeeklyIntakeTrend } from "@/components/dashboard/WeeklyIntakeTrend";
+import { SLAComplianceGauge } from "@/components/dashboard/SLAComplianceGauge";
+import { ScopeRegionBreakdown } from "@/components/dashboard/ScopeRegionBreakdown";
+import { AvgStageTime } from "@/components/dashboard/AvgStageTime";
 import { StatusBadge } from "@/components/projects/StatusBadge";
 import { RAGBadge } from "@/components/projects/RAGBadge";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { KGRLogo } from "@/components/layout/KGRLogo";
 import { KarthikLLCLogo } from "@/components/layout/KarthikLLCLogo";
 import Link from "next/link";
-import { format, startOfMonth } from "date-fns";
+import { format, startOfMonth, getISOWeek, getYear } from "date-fns";
 import { STATUS_PENDING_WITH } from "@/lib/workflow";
 import { ExternalLink } from "lucide-react";
 import { ProjectStatus, UserRole, ROLE_LABELS, SCOPE_LABELS } from "@/types/enums";
@@ -39,7 +43,6 @@ export default async function DashboardPage() {
   const activeProjects = projects.filter((p) => !["CLOSED_SUCCESS", "CANCELLED"].includes(p.status)).length;
   const closedThisMonth = projects.filter((p) => p.status === "CLOSED_SUCCESS" && new Date(p.updatedAt) >= monthStart).length;
 
-  // Determine "needs action" based on role
   const needsActionStatuses: Partial<Record<UserRole, ProjectStatus[]>> = {
     PMO_LEAD: ["SUBMITTED", "INFO_REQUIRED", "SOW_SIGNED", "RESOURCE_ASSIGNED"],
     PMO_TEAM: ["SOLUTIONING", "SOW_DRAFT"],
@@ -62,7 +65,6 @@ export default async function DashboardPage() {
     acc[p.status] = (acc[p.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-
   const pipelineData = Object.entries(statusCounts).map(([status, count]) => ({ status, count }));
 
   // RAG data
@@ -81,6 +83,111 @@ export default async function DashboardPage() {
       changedBy: { select: { name: true } },
     },
   });
+
+  // ────────────── Wave 3C: New chart data ──────────────
+
+  // Weekly intake — last 8 weeks
+  const eightWeeksAgo = new Date();
+  eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+  const weeklyProjectsRaw = await prisma.project.findMany({
+    where: {
+      ...(user.role === "CLIENT" ? { submittedById: user.id } : {}),
+      createdAt: { gte: eightWeeksAgo },
+    },
+    select: { createdAt: true },
+  });
+
+  // Group by ISO week (year-week key)
+  const weekMap: Record<string, { week: string; count: number }> = {};
+  for (const p of weeklyProjectsRaw) {
+    const d = new Date(p.createdAt);
+    const yr = getYear(d);
+    const wk = getISOWeek(d);
+    const key = `${yr}-W${String(wk).padStart(2, "0")}`;
+    if (!weekMap[key]) {
+      weekMap[key] = { week: `Wk ${wk}`, count: 0 };
+    }
+    weekMap[key].count += 1;
+  }
+  const weeklyData = Object.entries(weekMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, v]) => v);
+
+  // Scope × Region breakdown (active projects only)
+  const activeRawProjects = await prisma.project.findMany({
+    where: {
+      ...(user.role === "CLIENT" ? { submittedById: user.id } : {}),
+      status: { notIn: ["CLOSED_SUCCESS", "CLOSED_REJECTED", "CANCELLED"] },
+    },
+    select: { scopeOfWork: true, region: true },
+  });
+
+  const scopeRegionMap: Record<string, number> = {};
+  for (const p of activeRawProjects) {
+    const key = `${p.scopeOfWork}::${p.region}`;
+    scopeRegionMap[key] = (scopeRegionMap[key] ?? 0) + 1;
+  }
+  const scopeRegionData = Object.entries(scopeRegionMap).map(([key, count]) => {
+    const [scope, region] = key.split("::");
+    return { scope, region, count };
+  });
+
+  // SLA compliance
+  const slaRawProjects = await prisma.project.findMany({
+    where: {
+      ...(user.role === "CLIENT" ? { submittedById: user.id } : {}),
+      slaTargetDate: { not: null },
+      status: { notIn: ["CLOSED_SUCCESS", "CANCELLED"] },
+    },
+    select: { slaTargetDate: true, slaBreached: true },
+  });
+
+  let slaOnTrack = 0;
+  let slaWarning = 0;
+  let slaBreachedTotal = 0;
+  for (const p of slaRawProjects) {
+    const pp = p as typeof p & { slaTargetDate?: Date | null; slaBreached?: boolean };
+    if (!pp.slaTargetDate) continue;
+    if (pp.slaBreached) {
+      slaBreachedTotal += 1;
+    } else {
+      const daysLeft = (new Date(pp.slaTargetDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      if (daysLeft <= 2) slaWarning += 1;
+      else slaOnTrack += 1;
+    }
+  }
+
+  // Avg stage time from StatusHistory (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const recentHistoryForStage = await prisma.statusHistory.findMany({
+    where: { changedAt: { gte: thirtyDaysAgo } },
+    select: { toStatus: true, changedAt: true, projectId: true },
+    orderBy: { changedAt: "asc" },
+  });
+
+  // Compute avg days per stage from consecutive entries per project
+  const projectHistMap: Record<string, { toStatus: string; changedAt: Date }[]> = {};
+  for (const h of recentHistoryForStage) {
+    if (!projectHistMap[h.projectId]) projectHistMap[h.projectId] = [];
+    projectHistMap[h.projectId].push({ toStatus: h.toStatus, changedAt: new Date(h.changedAt) });
+  }
+
+  const stageDurationsMap: Record<string, number[]> = {};
+  for (const entries of Object.values(projectHistMap)) {
+    for (let i = 0; i < entries.length - 1; i++) {
+      const stage = entries[i].toStatus;
+      const duration =
+        (entries[i + 1].changedAt.getTime() - entries[i].changedAt.getTime()) / (1000 * 60 * 60 * 24);
+      if (!stageDurationsMap[stage]) stageDurationsMap[stage] = [];
+      stageDurationsMap[stage].push(duration);
+    }
+  }
+
+  const stageTimeData = Object.entries(stageDurationsMap).map(([stage, durations]) => ({
+    stage,
+    avgDays: durations.reduce((a, b) => a + b, 0) / durations.length,
+  }));
 
   const roleLabel: Record<string, string> = {
     CLIENT: "Client",
@@ -126,6 +233,18 @@ export default async function DashboardPage() {
             {ragData.length > 0 ? <RAGDistribution data={ragData} /> : <p className="text-sm text-gray-400 text-center py-8">No data</p>}
           </Card>
         </div>
+      </div>
+
+      {/* Charts row 1 — Wave 3C */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <WeeklyIntakeTrend data={weeklyData} />
+        <SLAComplianceGauge onTrack={slaOnTrack} warning={slaWarning} breached={slaBreachedTotal} />
+      </div>
+
+      {/* Charts row 2 — Wave 3C */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ScopeRegionBreakdown data={scopeRegionData} />
+        <AvgStageTime data={stageTimeData} />
       </div>
 
       {/* Recent Activity + Projects table */}

@@ -9,6 +9,7 @@ import { EditProjectModal } from "./EditProjectModal";
 import { CloneProjectModal } from "./CloneProjectModal";
 import { CommentsThread } from "@/components/projects/CommentsThread";
 import { InvoiceMilestonesPanel } from "@/components/projects/InvoiceMilestonesPanel";
+import { ChangeRequestsPanel } from "@/components/projects/ChangeRequestsPanel";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
 import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS } from "@/types/enums";
@@ -39,6 +40,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         orderBy: { createdAt: "asc" },
       },
       invoiceMilestones: { orderBy: { dueDate: "asc" } },
+      changeRequests: { select: { id: true } },
     },
   });
 
@@ -208,6 +210,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
               currentUserRole={user.role}
             />
           </Card>
+
+          {/* Change Requests */}
+          <ChangeRequestsPanel
+            projectId={project.id}
+            currentUserId={user.id}
+            currentUserRole={user.role}
+            submittedById={project.submittedById}
+            projectStatus={project.status}
+          />
 
           {/* Activity Timeline */}
           <Card>

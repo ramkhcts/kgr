@@ -24,6 +24,8 @@ model User {
   comments            Comment[]
   uploadedDocuments   Document[]
   resourceAssignments ProjectResource[] @relation("AssignedResources")
+  changeRequestsSubmitted ChangeRequest[] @relation("CRSubmitter")
+  changeRequestsReviewed  ChangeRequest[] @relation("CRReviewer")
 }
 
 model Project {
@@ -78,6 +80,7 @@ model Project {
   comments         Comment[]
   resources        ProjectResource[]
   invoiceMilestones InvoiceMilestone[]
+  changeRequests   ChangeRequest[]
 }
 
 model ProjectResource {
@@ -195,4 +198,24 @@ model FormField {
   isCore      Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ChangeRequest {
+  id             String   @id @default(cuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  submittedById  String
+  submittedBy    User     @relation("CRSubmitter", fields: [submittedById], references: [id])
+  reviewedById   String?
+  reviewedBy     User?    @relation("CRReviewer", fields: [reviewedById], references: [id])
+  title          String
+  description    String
+  impactScope    String?
+  impactCost     Float?
+  impactSchedule String?
+  status         String   @default("PENDING")
+  responseNotes  String?
+  submittedAt    DateTime @default(now())
+  reviewedAt     DateTime?
+  updatedAt      DateTime @updatedAt
 }
