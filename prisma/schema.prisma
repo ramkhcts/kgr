@@ -60,11 +60,33 @@ model Project {
   businessJustification String?
   slaTargetDate  DateTime?
   slaBreached    Boolean   @default(false)
+  slaPausedAt    DateTime?
 
   poValue        Float?
   poReceivedDate DateTime?
   poExpiryDate   DateTime?
   invoicedAmount Float?    @default(0)
+
+  // Intake enrichment
+  contractType            String?
+  estimatedMonthlyTickets Int?
+  avgHandleTimeMinutes    Int?
+  itsmPlatform            String?
+  estimatedAssetCount     Int?
+  goLiveDeadline          DateTime?
+  budgetRangeMin          Float?
+  budgetRangeMax          Float?
+  businessOwnerEmail      String?
+  requiredLanguages       String?
+  dataClassification      String?
+
+  // Commercial
+  poCurrency              String?   @default("USD")
+  paymentTermsDays        Int?      @default(30)
+  actualCostToDate        Float?    @default(0)
+
+  // Info request counter
+  infoRequestCount        Int       @default(0)
 
   submittedById      String
   submittedBy        User    @relation("Submitter", fields: [submittedById], references: [id])

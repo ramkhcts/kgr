@@ -140,6 +140,18 @@ export const TRANSITIONS: Transition[] = [
       },
     ],
   },
+  {
+    from: "RESOURCE_ASSIGNED",
+    to: "CLOSED_REJECTED",
+    allowedRoles: ["PMO_LEAD"],
+    label: "Close — Rejected",
+  },
+  {
+    from: "HANDED_TO_OPERATIONS",
+    to: "CLOSED_REJECTED",
+    allowedRoles: ["PMO_LEAD"],
+    label: "Close — Rejected",
+  },
 ];
 
 export const CANCEL_ALLOWED_ROLES: UserRole[] = ["PMO_LEAD"];
@@ -179,6 +191,7 @@ export const STATUS_LABELS: Record<ProjectStatus, string> = {
   RESOURCE_ASSIGNED: "Resource Assigned",
   HANDED_TO_OPERATIONS: "Handed to Operations",
   CLOSED_SUCCESS: "Closed (Success)",
+  CLOSED_REJECTED: "Closed (Rejected)",
   CANCELLED: "Cancelled",
 };
 
@@ -195,6 +208,7 @@ export const STATUS_ORDER: ProjectStatus[] = [
   "RESOURCE_ASSIGNED",
   "HANDED_TO_OPERATIONS",
   "CLOSED_SUCCESS",
+  "CLOSED_REJECTED",
   "CANCELLED",
 ];
 
@@ -229,5 +243,6 @@ export const STATUS_COLORS: Record<ProjectStatus, string> = {
   RESOURCE_ASSIGNED: "#22c55e",
   HANDED_TO_OPERATIONS: "#16a34a",
   CLOSED_SUCCESS: "#15803d",
+  CLOSED_REJECTED: "#991b1b",
   CANCELLED: "#6b7280",
 };

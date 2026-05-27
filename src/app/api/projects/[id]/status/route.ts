@@ -54,7 +54,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const isSuperAdmin = userRole === "SUPER_ADMIN";
 
   if (toStatus === "CANCELLED") {
-    if (!CANCEL_ALLOWED_ROLES.includes(userRole) && !isSuperAdmin) {
+    const isClientSelfCancel =
+      userRole === "CLIENT" &&
+      project.status === "SUBMITTED" &&
+      project.submittedById === user.id;
+    if (!isClientSelfCancel && !CANCEL_ALLOWED_ROLES.includes(userRole) && !isSuperAdmin) {
       return NextResponse.json({ error: "Only PMO Leads can cancel projects" }, { status: 403 });
     }
     const updated = await prisma.project.update({
@@ -164,7 +168,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (poNumber) updateData.poNumber = poNumber;
   if (assignedResourceId) updateData.assignedResourceId = assignedResourceId;
 
+  // SLA pause/resume and info request counter
+  if (toStatus === "INFO_REQUIRED") {
+    updateData.slaPausedAt = new Date();
+    const newCount = ((project as unknown as { infoRequestCount?: number }).infoRequestCount ?? 0) + 1;
+    updateData.infoRequestCount = newCount;
+    // Auto-escalate RAG to AMBER if 3+ info requests
+    if (newCount >= 3 && !ragStatus) {
+      updateData.ragStatus = "AMBER";
+    }
+  }
+
+  if (currentStatus === "INFO_REQUIRED" && toStatus === "UNDER_REVIEW") {
+    const pausedAt = (project as unknown as { slaPausedAt?: Date | null }).slaPausedAt;
+    if (pausedAt && project.slaTargetDate) {
+      const pausedMs = new Date().getTime() - new Date(pausedAt).getTime();
+      const pausedDays = Math.ceil(pausedMs / (1000 * 60 * 60 * 24));
+      const newTargetDate = new Date(project.slaTargetDate);
+      newTargetDate.setDate(newTargetDate.getDate() + pausedDays);
+      updateData.slaTargetDate = newTargetDate;
+    }
+    updateData.slaPausedAt = null;
+  }
+
   if (toStatus === "PO_RECEIVED") {
+    if (poValue !== undefined && parseFloat(poValue) < 0) {
+      return NextResponse.json({ error: "PO value cannot be negative" }, { status: 400 });
+    }
     if (poValue) updateData.poValue = parseFloat(poValue);
     updateData.poReceivedDate = new Date();
     if (poExpiryDate) updateData.poExpiryDate = new Date(poExpiryDate);

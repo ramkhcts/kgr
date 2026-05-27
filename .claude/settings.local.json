@@ -19,7 +19,10 @@
       "Bash(git add *)",
       "Bash(DATABASE_URL=\"file:./dev.db\" npx prisma db push)",
       "Bash(DATABASE_URL=\"file:./dev.db\" npx prisma generate)",
-      "Bash(npm list *)"
+      "Bash(npm list *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(ssh -o ConnectTimeout=10 root@kgr.math-mojo.com \"cd /var/www/kgr && git pull && npm run build && pm2 restart kgr && echo 'Done'\")"
     ]
   }
 }

@@ -32,6 +32,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!roleName || dailyRate === undefined) {
     return NextResponse.json({ error: "roleName and dailyRate are required" }, { status: 400 });
   }
+  if (!dailyRate || parseFloat(dailyRate) <= 0) {
+    return NextResponse.json({ error: "Daily rate must be greater than 0" }, { status: 400 });
+  }
 
   // Check existing resources to determine if this should be the lead
   const existingCount = await prisma.projectResource.count({ where: { projectId: id } });

@@ -19,6 +19,7 @@ export const ProjectStatus = {
   RESOURCE_ASSIGNED: "RESOURCE_ASSIGNED",
   HANDED_TO_OPERATIONS: "HANDED_TO_OPERATIONS",
   CLOSED_SUCCESS: "CLOSED_SUCCESS",
+  CLOSED_REJECTED: "CLOSED_REJECTED",
   CANCELLED: "CANCELLED",
 } as const;
 export type ProjectStatus = (typeof ProjectStatus)[keyof typeof ProjectStatus];
@@ -137,4 +138,35 @@ export const WORKPLACE_MODEL_LABELS: Record<string, string> = {
   HYBRID_ON_SITE_OFFSHORE: "Hybrid — On-Site + Offshore",
   HYBRID_ONSHORE_OFFSHORE: "Hybrid — Onshore + Offshore",
   HYBRID_ALL:              "Hybrid — On-Site + Onshore + Offshore",
+};
+
+export const CONTRACT_TYPE_LABELS: Record<string, string> = {
+  TIME_AND_MATERIALS: "Time & Materials",
+  FIXED_PRICE: "Fixed Price",
+  MANAGED_SERVICE: "Managed Service",
+  NOT_SURE: "Not Sure Yet",
+};
+
+export const DATA_CLASSIFICATION_LABELS: Record<string, string> = {
+  PUBLIC: "Public",
+  INTERNAL: "Internal",
+  CONFIDENTIAL: "Confidential",
+  RESTRICTED: "Restricted / Regulated",
+};
+
+export const DATA_CLASSIFICATION_COLORS: Record<string, string> = {
+  PUBLIC: "#16a34a",
+  INTERNAL: "#2563eb",
+  CONFIDENTIAL: "#d97706",
+  RESTRICTED: "#dc2626",
+};
+
+export const ITSM_PLATFORM_LABELS: Record<string, string> = {
+  SERVICENOW: "ServiceNow",
+  JIRA_SERVICE_MANAGEMENT: "Jira Service Management",
+  REMEDY: "BMC Remedy",
+  ZENDESK: "Zendesk",
+  FRESHSERVICE: "Freshservice",
+  OTHER: "Other",
+  NONE: "None / To Be Determined",
 };

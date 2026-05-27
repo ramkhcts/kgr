@@ -16,6 +16,9 @@ import {
   URGENCY_LABELS,
   COVERAGE_MODEL_LABELS,
   WORKPLACE_MODEL_LABELS,
+  CONTRACT_TYPE_LABELS,
+  DATA_CLASSIFICATION_LABELS,
+  ITSM_PLATFORM_LABELS,
 } from "@/types/enums";
 
 interface CustomFormField {
@@ -39,18 +42,32 @@ const schema = z.object({
   region: z.enum(["NA", "EMEA", "LATAM", "ASPAC"]),
   anticipatedStartDate: z.string().min(1, "Start date is required"),
   anticipatedEndDate: z.string().min(1, "End date is required"),
+  goLiveDeadline: z.string().optional(),
   budgetAvailable: z.any().transform((v): boolean => v === true || v === "true"),
+  budgetRangeMin: z.number().optional(),
+  budgetRangeMax: z.number().optional(),
   notes: z.string().optional(),
   priority:             z.enum(["CRITICAL","HIGH","MEDIUM","LOW"]),
   urgency:              z.enum(["EMERGENCY","URGENT","STANDARD","PLANNED"]),
   requestingDepartment: z.string().min(1, "Department is required"),
   businessOwner:        z.string().min(1, "Business owner is required"),
+  businessOwnerEmail:   z.string().email("Invalid email").optional().or(z.literal("")),
   businessJustification:z.string().min(20, "Please provide a business justification (at least 20 characters)"),
+  contractType:         z.enum(["NOT_SURE","TIME_AND_MATERIALS","FIXED_PRICE","MANAGED_SERVICE"]).optional(),
+  dataClassification:   z.enum(["PUBLIC","INTERNAL","CONFIDENTIAL","RESTRICTED"]).optional(),
   numberOfFtes:         z.number().int().min(1, "At least 1 FTE required"),
   coverageModel:        z.enum(["STANDARD_8X5","EXTENDED_12X5","HOURS_24X7","FOLLOW_THE_SUN"]),
   workplaceModel:       z.enum(["ON_SITE","ONSHORE_REMOTE","OFFSHORE_REMOTE","HYBRID_ON_SITE_ONSHORE","HYBRID_ON_SITE_OFFSHORE","HYBRID_ONSHORE_OFFSHORE","HYBRID_ALL"]),
   incumbentVendor:      z.string().optional(),
   complianceNotes:      z.string().optional(),
+  requiredLanguages:    z.string().optional(),
+  estimatedMonthlyTickets: z.number().int().optional(),
+  avgHandleTimeMinutes:    z.number().int().optional(),
+  itsmPlatform:            z.enum(["SERVICENOW","JIRA_SERVICE_MANAGEMENT","REMEDY","ZENDESK","FRESHSERVICE","OTHER","NONE"]).optional(),
+  estimatedAssetCount:     z.number().int().optional(),
+}).refine(data => !data.anticipatedEndDate || !data.anticipatedStartDate || new Date(data.anticipatedEndDate) > new Date(data.anticipatedStartDate), {
+  message: "End date must be after start date",
+  path: ["anticipatedEndDate"],
 });
 
 type FormData = z.infer<typeof schema>;
@@ -66,6 +83,9 @@ const PRIORITY_OPTIONS = Object.entries(PRIORITY_LABELS).map(([value, label]) =>
 const URGENCY_OPTIONS = Object.entries(URGENCY_LABELS).map(([value, label]) => ({ value, label }));
 const COVERAGE_OPTIONS = Object.entries(COVERAGE_MODEL_LABELS).map(([value, label]) => ({ value, label }));
 const WORKPLACE_OPTIONS = Object.entries(WORKPLACE_MODEL_LABELS).map(([value, label]) => ({ value, label }));
+const CONTRACT_TYPE_OPTIONS = Object.entries(CONTRACT_TYPE_LABELS).map(([value, label]) => ({ value, label }));
+const DATA_CLASSIFICATION_OPTIONS = Object.entries(DATA_CLASSIFICATION_LABELS).map(([value, label]) => ({ value, label }));
+const ITSM_PLATFORM_OPTIONS = Object.entries(ITSM_PLATFORM_LABELS).map(([value, label]) => ({ value, label }));
 
 export function IntakeForm() {
   const router = useRouter();
@@ -110,6 +130,10 @@ export function IntakeForm() {
   const watchedLocation = watch("location");
   const watchedRegion   = watch("region");
   const watchedScope    = watch("scopeOfWork");
+  const watchedBudget   = watch("budgetAvailable");
+  const isServiceDeskOrRCC = watchedScope === "SERVICE_DESK" || watchedScope === "REMOTE_COMMAND_CENTER";
+  const isFieldOrSite      = watchedScope === "FIELD_SERVICES" || watchedScope === "SITE_SUPPORT_SERVICES";
+  const startDatePast = startDate ? new Date(startDate) < new Date(new Date().toISOString().split("T")[0]) : false;
 
   // Duplicate detection with 500ms debounce
   useEffect(() => {
@@ -167,6 +191,11 @@ export function IntakeForm() {
           customFields: Object.keys(customFieldValues).length > 0
             ? JSON.stringify(customFieldValues)
             : undefined,
+          contractType: data.contractType || undefined,
+          dataClassification: data.dataClassification || undefined,
+          itsmPlatform: data.itsmPlatform || undefined,
+          goLiveDeadline: data.goLiveDeadline || undefined,
+          businessOwnerEmail: data.businessOwnerEmail || undefined,
         }),
       });
       if (!res.ok) {
@@ -259,6 +288,14 @@ export function IntakeForm() {
           {...register("businessOwner")}
         />
 
+        <Input
+          label="Business Owner Email"
+          type="email"
+          placeholder="owner@company.com"
+          error={errors.businessOwnerEmail?.message}
+          {...register("businessOwnerEmail")}
+        />
+
         <div className="md:col-span-2">
           <Textarea
             label="Business Justification *"
@@ -268,6 +305,22 @@ export function IntakeForm() {
             {...register("businessJustification")}
           />
         </div>
+
+        <Select
+          label="Contract Type"
+          options={CONTRACT_TYPE_OPTIONS}
+          placeholder="Select contract type..."
+          error={errors.contractType?.message}
+          {...register("contractType")}
+        />
+
+        <Select
+          label="Data Classification"
+          options={DATA_CLASSIFICATION_OPTIONS}
+          placeholder="Select classification..."
+          error={errors.dataClassification?.message}
+          {...register("dataClassification")}
+        />
 
         {/* Priority + Urgency row */}
         <div>
@@ -371,11 +424,59 @@ export function IntakeForm() {
           {...register("incumbentVendor")}
         />
 
+        <div className="md:col-span-2">
+          <Textarea
+            label="Compliance Requirements"
+            placeholder="e.g. HIPAA, SOX, PCI-DSS, None"
+            rows={2}
+            {...register("complianceNotes")}
+          />
+        </div>
+
         <Input
-          label="Compliance Requirements"
-          placeholder="e.g. HIPAA, SOX, PCI-DSS, None"
-          {...register("complianceNotes")}
+          label="Required Languages"
+          placeholder="e.g. English, Spanish, German"
+          {...register("requiredLanguages")}
         />
+
+        {isServiceDeskOrRCC && (
+          <>
+            <Input
+              label="Est. Monthly Ticket Volume"
+              type="number"
+              placeholder="e.g. 500"
+              min={0}
+              error={errors.estimatedMonthlyTickets?.message}
+              {...register("estimatedMonthlyTickets", { valueAsNumber: true })}
+            />
+            <Input
+              label="Avg Handle Time (min)"
+              type="number"
+              placeholder="e.g. 15"
+              min={0}
+              error={errors.avgHandleTimeMinutes?.message}
+              {...register("avgHandleTimeMinutes", { valueAsNumber: true })}
+            />
+            <Select
+              label="ITSM Platform"
+              options={ITSM_PLATFORM_OPTIONS}
+              placeholder="Select ITSM platform..."
+              error={errors.itsmPlatform?.message}
+              {...register("itsmPlatform")}
+            />
+          </>
+        )}
+
+        {isFieldOrSite && (
+          <Input
+            label="Est. Asset / Device Count"
+            type="number"
+            placeholder="e.g. 200"
+            min={0}
+            error={errors.estimatedAssetCount?.message}
+            {...register("estimatedAssetCount", { valueAsNumber: true })}
+          />
+        )}
 
         <Input
           label="Anticipated Start Date *"
@@ -383,12 +484,21 @@ export function IntakeForm() {
           error={errors.anticipatedStartDate?.message}
           {...register("anticipatedStartDate")}
         />
+        {startDatePast && (
+          <p className="text-xs text-amber-600 -mt-3 col-span-1">Start date is in the past</p>
+        )}
 
         <Input
           label="Anticipated End Date *"
           type="date"
           error={errors.anticipatedEndDate?.message}
           {...register("anticipatedEndDate")}
+        />
+
+        <Input
+          label="Go-Live Deadline (if different from start date)"
+          type="date"
+          {...register("goLiveDeadline")}
         />
 
         <div className="md:col-span-2">
@@ -407,6 +517,27 @@ export function IntakeForm() {
             ))}
           </div>
         </div>
+
+        {watchedBudget && (
+          <div className="md:col-span-2 grid grid-cols-2 gap-4">
+            <Input
+              label="Budget Min (USD)"
+              type="number"
+              placeholder="e.g. 50000"
+              min={0}
+              error={errors.budgetRangeMin?.message}
+              {...register("budgetRangeMin", { valueAsNumber: true })}
+            />
+            <Input
+              label="Budget Max (USD)"
+              type="number"
+              placeholder="e.g. 200000"
+              min={0}
+              error={errors.budgetRangeMax?.message}
+              {...register("budgetRangeMax", { valueAsNumber: true })}
+            />
+          </div>
+        )}
 
         <div className="md:col-span-2">
           <Textarea

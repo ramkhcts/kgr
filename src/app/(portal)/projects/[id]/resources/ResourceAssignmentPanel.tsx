@@ -327,7 +327,7 @@ export function ResourceAssignmentPanel({
                         <Input
                           label="Daily Rate *"
                           type="number"
-                          min="0"
+                          min={0.01}
                           step="0.01"
                           value={dailyRate}
                           onChange={(e) => setDailyRate(e.target.value)}
@@ -525,7 +525,7 @@ export function ResourceAssignmentPanel({
             <Input
               label="Daily Rate *"
               type="number"
-              min="0"
+              min={0.01}
               step="0.01"
               value={editDailyRate}
               onChange={(e) => setEditDailyRate(e.target.value)}

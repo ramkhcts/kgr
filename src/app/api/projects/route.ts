@@ -49,6 +49,18 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // Server-side validations
+    if (body.numberOfFtes && parseInt(body.numberOfFtes) > 500) {
+      return NextResponse.json({ error: "Number of FTEs cannot exceed 500" }, { status: 400 });
+    }
+    if (body.poValue && parseFloat(body.poValue) < 0) {
+      return NextResponse.json({ error: "PO value cannot be negative" }, { status: 400 });
+    }
+    if (body.budgetRangeMin && body.budgetRangeMax &&
+        parseFloat(body.budgetRangeMin) > parseFloat(body.budgetRangeMax)) {
+      return NextResponse.json({ error: "Budget minimum cannot exceed budget maximum" }, { status: 400 });
+    }
+
     // Auto-escalate priority if urgency is high but priority is low
     let priority = body.priority ?? "MEDIUM";
     if ((body.urgency === "EMERGENCY" || body.urgency === "URGENT") && (priority === "MEDIUM" || priority === "LOW")) {
@@ -81,6 +93,17 @@ export async function POST(req: NextRequest) {
         incumbentVendor:       body.incumbentVendor ?? null,
         complianceNotes:       body.complianceNotes ?? null,
         businessJustification: body.businessJustification ?? null,
+        contractType:          body.contractType || null,
+        estimatedMonthlyTickets: body.estimatedMonthlyTickets ? parseInt(body.estimatedMonthlyTickets) : null,
+        avgHandleTimeMinutes:  body.avgHandleTimeMinutes ? parseInt(body.avgHandleTimeMinutes) : null,
+        itsmPlatform:          body.itsmPlatform || null,
+        estimatedAssetCount:   body.estimatedAssetCount ? parseInt(body.estimatedAssetCount) : null,
+        goLiveDeadline:        body.goLiveDeadline ? new Date(body.goLiveDeadline) : null,
+        budgetRangeMin:        body.budgetRangeMin ? parseFloat(body.budgetRangeMin) : null,
+        budgetRangeMax:        body.budgetRangeMax ? parseFloat(body.budgetRangeMax) : null,
+        businessOwnerEmail:    body.businessOwnerEmail || null,
+        requiredLanguages:     body.requiredLanguages || null,
+        dataClassification:    body.dataClassification || null,
       },
       include: { submittedBy: { select: { id: true, name: true, email: true } } },
     });

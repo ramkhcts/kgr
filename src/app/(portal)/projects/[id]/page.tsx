@@ -12,7 +12,7 @@ import { InvoiceMilestonesPanel } from "@/components/projects/InvoiceMilestonesP
 import { ChangeRequestsPanel } from "@/components/projects/ChangeRequestsPanel";
 import { Card } from "@/components/ui/Card";
 import { format } from "date-fns";
-import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS } from "@/types/enums";
+import { SCOPE_LABELS, DOCUMENT_TYPE_LABELS, PRIORITY_LABELS, PRIORITY_COLORS, URGENCY_LABELS, COVERAGE_MODEL_LABELS, WORKPLACE_MODEL_LABELS, CONTRACT_TYPE_LABELS, DATA_CLASSIFICATION_LABELS, DATA_CLASSIFICATION_COLORS, ITSM_PLATFORM_LABELS } from "@/types/enums";
 import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download, AlertTriangle, Users } from "lucide-react";
 import Link from "next/link";
 import { AIInsightsPanel } from "@/components/projects/AIInsightsPanel";
@@ -127,11 +127,27 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             const p = project as unknown as {
               requestingDepartment?: string | null;
               businessOwner?: string | null;
+              businessOwnerEmail?: string | null;
               businessJustification?: string | null;
               incumbentVendor?: string | null;
               complianceNotes?: string | null;
+              contractType?: string | null;
+              dataClassification?: string | null;
+              budgetRangeMin?: number | null;
+              budgetRangeMax?: number | null;
+              goLiveDeadline?: Date | null;
+              requiredLanguages?: string | null;
+              estimatedMonthlyTickets?: number | null;
+              avgHandleTimeMinutes?: number | null;
+              estimatedAssetCount?: number | null;
+              itsmPlatform?: string | null;
             };
-            if (!p.requestingDepartment && !p.businessOwner && !p.businessJustification && !p.incumbentVendor && !p.complianceNotes) return null;
+            const hasAny = p.requestingDepartment || p.businessOwner || p.businessJustification ||
+              p.incumbentVendor || p.complianceNotes || p.contractType || p.dataClassification ||
+              p.budgetRangeMin != null || p.budgetRangeMax != null || p.businessOwnerEmail ||
+              p.goLiveDeadline || p.requiredLanguages || p.estimatedMonthlyTickets != null ||
+              p.avgHandleTimeMinutes != null || p.estimatedAssetCount != null || p.itsmPlatform;
+            if (!hasAny) return null;
             return (
               <Card>
                 <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Business Context</p>
@@ -148,10 +164,46 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       <p className="text-sm text-gray-800">{p.businessOwner}</p>
                     </div>
                   )}
+                  {p.businessOwnerEmail && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Business Owner Email</p>
+                      <p className="text-sm text-gray-800">{p.businessOwnerEmail}</p>
+                    </div>
+                  )}
                   {p.businessJustification && (
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Business Justification</p>
                       <p className="text-sm text-gray-800">{p.businessJustification}</p>
+                    </div>
+                  )}
+                  {p.contractType && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Contract Type</p>
+                      <p className="text-sm text-gray-800">{CONTRACT_TYPE_LABELS[p.contractType] ?? p.contractType}</p>
+                    </div>
+                  )}
+                  {p.dataClassification && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Data Classification</p>
+                      <p className="text-sm font-600" style={{ color: DATA_CLASSIFICATION_COLORS[p.dataClassification] ?? "#374151" }}>
+                        {DATA_CLASSIFICATION_LABELS[p.dataClassification] ?? p.dataClassification}
+                      </p>
+                    </div>
+                  )}
+                  {(p.budgetRangeMin != null || p.budgetRangeMax != null) && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Budget Range</p>
+                      <p className="text-sm text-gray-800">
+                        {p.budgetRangeMin != null ? `$${p.budgetRangeMin.toLocaleString()}` : "—"}
+                        {" – "}
+                        {p.budgetRangeMax != null ? `$${p.budgetRangeMax.toLocaleString()}` : "—"}
+                      </p>
+                    </div>
+                  )}
+                  {p.goLiveDeadline && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Go-Live Deadline</p>
+                      <p className="text-sm text-gray-800">{format(new Date(p.goLiveDeadline), "MMM d, yyyy")}</p>
                     </div>
                   )}
                   {p.incumbentVendor && (
@@ -164,6 +216,36 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                     <div>
                       <p className="text-xs text-gray-500 mb-1">Compliance Requirements</p>
                       <p className="text-sm text-gray-800">{p.complianceNotes}</p>
+                    </div>
+                  )}
+                  {p.requiredLanguages && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Required Languages</p>
+                      <p className="text-sm text-gray-800">{p.requiredLanguages}</p>
+                    </div>
+                  )}
+                  {p.estimatedMonthlyTickets != null && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Est. Monthly Ticket Volume</p>
+                      <p className="text-sm text-gray-800">{p.estimatedMonthlyTickets.toLocaleString()}</p>
+                    </div>
+                  )}
+                  {p.avgHandleTimeMinutes != null && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Avg Handle Time</p>
+                      <p className="text-sm text-gray-800">{p.avgHandleTimeMinutes} min</p>
+                    </div>
+                  )}
+                  {p.itsmPlatform && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">ITSM Platform</p>
+                      <p className="text-sm text-gray-800">{ITSM_PLATFORM_LABELS[p.itsmPlatform] ?? p.itsmPlatform}</p>
+                    </div>
+                  )}
+                  {p.estimatedAssetCount != null && (
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">Est. Asset / Device Count</p>
+                      <p className="text-sm text-gray-800">{p.estimatedAssetCount.toLocaleString()}</p>
                     </div>
                   )}
                 </div>
