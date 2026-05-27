@@ -130,7 +130,11 @@ export const COVERAGE_MODEL_LABELS: Record<string, string> = {
 };
 
 export const WORKPLACE_MODEL_LABELS: Record<string, string> = {
-  ON_SITE: "On-Site",
-  REMOTE: "Remote",
-  HYBRID: "Hybrid",
+  ON_SITE:                 "On-Site Only",
+  ONSHORE_REMOTE:          "Onshore Remote",
+  OFFSHORE_REMOTE:         "Offshore Remote",
+  HYBRID_ON_SITE_ONSHORE:  "Hybrid — On-Site + Onshore",
+  HYBRID_ON_SITE_OFFSHORE: "Hybrid — On-Site + Offshore",
+  HYBRID_ONSHORE_OFFSHORE: "Hybrid — Onshore + Offshore",
+  HYBRID_ALL:              "Hybrid — On-Site + Onshore + Offshore",
 };

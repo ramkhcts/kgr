@@ -48,7 +48,7 @@ const schema = z.object({
   businessJustification:z.string().min(20, "Please provide a business justification (at least 20 characters)"),
   numberOfFtes:         z.number().int().min(1, "At least 1 FTE required"),
   coverageModel:        z.enum(["STANDARD_8X5","EXTENDED_12X5","HOURS_24X7","FOLLOW_THE_SUN"]),
-  workplaceModel:       z.enum(["ON_SITE","REMOTE","HYBRID"]),
+  workplaceModel:       z.enum(["ON_SITE","ONSHORE_REMOTE","OFFSHORE_REMOTE","HYBRID_ON_SITE_ONSHORE","HYBRID_ON_SITE_OFFSHORE","HYBRID_ONSHORE_OFFSHORE","HYBRID_ALL"]),
   incumbentVendor:      z.string().optional(),
   complianceNotes:      z.string().optional(),
 });
@@ -345,8 +345,10 @@ export function IntakeForm() {
           label="Number of FTEs *"
           type="number"
           placeholder="e.g. 3"
+          min={1}
+          max={500}
           error={errors.numberOfFtes?.message}
-          {...register("numberOfFtes", { valueAsNumber: true })}
+          {...register("numberOfFtes", { valueAsNumber: true, min: { value: 1, message: "At least 1 FTE required" } })}
         />
 
         <Select
