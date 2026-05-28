@@ -11,6 +11,7 @@ import {
 } from "@/lib/workflow";
 import { ProjectStatus, UserRole } from "@/types/enums";
 import { sendStageNotification } from "@/lib/email";
+import { createNotification } from "@/lib/notifications";
 
 async function getNotifyEmails(projectId: string, submittedById: string) {
   const [submitter, pmoLeads] = await Promise.all([
@@ -81,6 +82,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       toStatus: "CANCELLED",
       extra: { cancelledReason: cancelledReason || "" },
     }).catch((e) => console.error("[EMAIL ERROR]", e));
+
+    // In-app notification to client
+    createNotification(
+      project.submittedById,
+      `Project Cancelled`,
+      `"${project.projectName}" has been cancelled.`,
+      `/projects/${id}`
+    ).catch(() => {});
 
     setSLATargetForStatus(id, "CANCELLED").catch(() => {});
 
@@ -244,6 +253,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   setSLATargetForStatus(id, toStatus).catch(() => {});
   recordSLABreach(id, currentStatus).catch(() => {});
+
+  // In-app notifications for key status transitions
+  const clientNotifyStatuses = ["INFO_REQUIRED", "SOW_APPROVAL", "RESOURCE_ASSIGNED", "CLOSED_SUCCESS"];
+  if (clientNotifyStatuses.includes(toStatus)) {
+    const statusMessages: Record<string, string> = {
+      INFO_REQUIRED: `Additional information is needed for "${project.projectName}". Please check the project comments.`,
+      SOW_APPROVAL: `Your Statement of Work for "${project.projectName}" is ready for review and signature.`,
+      RESOURCE_ASSIGNED: `A team has been assigned to "${project.projectName}". Onboarding is in progress.`,
+      CLOSED_SUCCESS: `"${project.projectName}" has been successfully closed. Thank you!`,
+    };
+    createNotification(
+      project.submittedById,
+      toStatus.replace(/_/g, " "),
+      statusMessages[toStatus] ?? `Status updated to ${toStatus}`,
+      `/projects/${id}`
+    ).catch(() => {});
+  }
 
   return NextResponse.json(updated);
 }

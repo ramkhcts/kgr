@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { AlertCircle } from "lucide-react";
@@ -55,15 +56,22 @@ export function LoginForm() {
         autoComplete="email"
       />
 
-      <Input
-        label="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder="••••••••"
-        required
-        autoComplete="current-password"
-      />
+      <div>
+        <Input
+          label="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+          autoComplete="current-password"
+        />
+        <div className="text-right mt-1">
+          <Link href="/forgot-password" className="text-xs text-[#1a1f5e] hover:underline">
+            Forgot password?
+          </Link>
+        </div>
+      </div>
 
       <Button type="submit" className="w-full" size="lg" loading={loading}>
         Sign In

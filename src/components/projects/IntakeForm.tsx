@@ -631,7 +631,7 @@ export function IntakeForm() {
         </div>
 
         {watchedBudget && (
-          <div className="md:col-span-2 grid grid-cols-2 gap-4">
+          <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
               label="Budget Min (USD)"
               type="number"

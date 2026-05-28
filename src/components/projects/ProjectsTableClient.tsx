@@ -122,7 +122,53 @@ export function ProjectsTableClient({ projects, userRole, filterLabel, filter, c
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      {/* Mobile card list (< md) */}
+      <div className="md:hidden space-y-3">
+        {projects.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-sm">
+            {filterLabel
+              ? `No projects match "${filterLabel}".`
+              : userRole === "CLIENT"
+                ? "No requests yet. Submit your first request to get started."
+                : "No projects found."}
+            {filterLabel && (
+              <span className="block mt-2">
+                <Link href="/projects" className="text-[#1a1f5e] font-600 hover:underline text-xs">
+                  Clear filter
+                </Link>
+              </span>
+            )}
+          </div>
+        ) : (
+          projects.map((p) => {
+            const RAG_DOT: Record<string, string> = { RED: "bg-red-500", AMBER: "bg-amber-500", GREEN: "bg-green-500" };
+            return (
+              <Link
+                key={p.id}
+                href={`/projects/${p.id}`}
+                className="block bg-white rounded-xl border border-[#e2e4f0] p-4 hover:shadow-sm transition-shadow"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${RAG_DOT[p.ragStatus] ?? "bg-gray-400"}`} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-700 text-[#1a1f5e] truncate">{p.projectName}</p>
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{p.location}</p>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 flex items-center gap-1.5">
+                    <StatusBadge status={p.status} />
+                    <ExternalLink size={14} className="text-gray-300" />
+                  </div>
+                </div>
+              </Link>
+            );
+          })
+        )}
+      </div>
+
+      {/* Desktop table (md+) */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[#e2e4f0] bg-[#f4f5fb]">
