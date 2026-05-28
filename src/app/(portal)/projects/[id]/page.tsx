@@ -547,8 +547,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
             projectStatus={project.status}
           />
 
-          {/* Activity Timeline */}
-          <Card>
+          {/* Activity Timeline — PMO only */}
+          {user.role !== "CLIENT" && <Card>
             <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">
               Status History · {project.statusHistory.length} transitions
             </p>
@@ -592,7 +592,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                 })}
               </div>
             </div>
-          </Card>
+          </Card>}
         </div>
 
         {/* Sidebar */}
