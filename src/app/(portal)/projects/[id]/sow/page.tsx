@@ -58,6 +58,9 @@ export default async function SOWPage({ params }: { params: Promise<{ id: string
           <div className="rounded-xl p-4" style={{ background: "linear-gradient(135deg, #1a1f5e, #3d2d8e)" }}>
             <p className="text-[#d4a017] font-800 text-base">KGR End User Services</p>
             <p className="text-white/70 text-xs">Statement of Work · Customer: KarthikLLC</p>
+            {project.msaReference && (
+              <p className="text-white/60 text-xs mt-1">Governing Agreement: {project.msaReference}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -111,7 +114,18 @@ export default async function SOWPage({ params }: { params: Promise<{ id: string
         </div>
       </Card>
 
-      <SOWPanel project={{ id: project.id, status: project.status, documents: project.documents }} userRole={user.role} />
+      <SOWPanel
+        project={{
+          id: project.id,
+          status: project.status,
+          documents: project.documents,
+          msaReference: project.msaReference,
+          poValue: project.poValue,
+          poCurrency: project.poCurrency,
+          paymentTermsDays: project.paymentTermsDays,
+        }}
+        userRole={user.role}
+      />
     </div>
   );
 }

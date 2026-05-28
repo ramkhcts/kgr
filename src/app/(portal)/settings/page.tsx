@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { ProfileForm } from "./ProfileForm";
 import { AppearanceCard } from "./AppearanceCard";
 import { FormBuilder } from "./FormBuilder";
+import { SkillsCard } from "./SkillsCard";
 
 export default async function SettingsPage() {
   const sessionUser = await requireAuth();
@@ -50,7 +51,12 @@ export default async function SettingsPage() {
         </div>
       </section>
 
-      {/* Section C: Form Builder (SUPER_ADMIN only) */}
+      {/* Section C: Skills & Certifications (PMO roles only) */}
+      {["PMO_TEAM", "PMO_LEAD", "SUPER_ADMIN"].includes(dbUser.role) && (
+        <SkillsCard />
+      )}
+
+      {/* Section D: Form Builder (SUPER_ADMIN only) */}
       {dbUser.role === "SUPER_ADMIN" && formFields && (
         <section className="bg-white rounded-2xl border border-[#e2e4f0] overflow-hidden">
           <div className="px-6 py-4 border-b border-[#e2e4f0]">

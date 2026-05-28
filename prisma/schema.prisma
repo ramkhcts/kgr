@@ -288,7 +288,7 @@ model SLABreach {
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   status       String
   breachedAt   DateTime @default(now())
-  daysOverdue  Int
+  daysOverdue  Float
   creditPct    Float    @default(0)
   creditAmount Float    @default(0)
 }

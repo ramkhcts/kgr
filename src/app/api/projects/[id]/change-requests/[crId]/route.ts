@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sendCRDecisionNotification } from "@/lib/email";
 
 export async function PATCH(
   req: NextRequest,
@@ -77,6 +78,28 @@ export async function PATCH(
     const project = await prisma.project.findUnique({ where: { id }, select: { ragStatus: true } });
     if (project?.ragStatus === "GREEN") {
       await prisma.project.update({ where: { id }, data: { ragStatus: "AMBER" } });
+    }
+  }
+
+  // Email submitter on final decisions
+  if (["APPROVED", "REJECTED"].includes(status)) {
+    const crWithDetails = await prisma.changeRequest.findUnique({
+      where: { id: crId },
+      include: {
+        submittedBy: { select: { email: true, name: true } },
+        project: { select: { projectName: true } },
+      },
+    });
+    if (crWithDetails?.submittedBy?.email) {
+      sendCRDecisionNotification({
+        toEmail: crWithDetails.submittedBy.email,
+        submitterName: crWithDetails.submittedBy.name,
+        projectName: crWithDetails.project.projectName,
+        projectId: id,
+        crTitle: crWithDetails.title,
+        decision: status as "APPROVED" | "REJECTED",
+        responseNotes: responseNotes ?? null,
+      }).catch((e) => console.error("[EMAIL ERROR]", e));
     }
   }
 

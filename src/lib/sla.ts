@@ -44,12 +44,15 @@ export async function recordSLABreach(projectId: string, status: string): Promis
 
 export function computeSLAStatus(
   slaTargetDate: Date | null,
-  warningDays: number
+  warningDays: number,
+  priority: string = "MEDIUM"
 ): "ON_TRACK" | "WARNING" | "BREACHED" {
   if (!slaTargetDate) return "ON_TRACK";
+  const multiplier: Record<string, number> = { CRITICAL: 0.5, HIGH: 0.75, MEDIUM: 1, LOW: 1.5 };
+  const adjustedWarningDays = Math.round(warningDays * (multiplier[priority] ?? 1));
   const now = new Date();
   const daysLeft = (slaTargetDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
   if (daysLeft < 0) return "BREACHED";
-  if (daysLeft <= warningDays) return "WARNING";
+  if (daysLeft <= adjustedWarningDays) return "WARNING";
   return "ON_TRACK";
 }

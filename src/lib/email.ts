@@ -279,6 +279,38 @@ export async function sendStageNotification(opts: NotifyOpts) {
   await Promise.all(sends);
 }
 
+export async function sendCRDecisionNotification(opts: {
+  toEmail: string;
+  submitterName: string;
+  projectName: string;
+  projectId: string;
+  crTitle: string;
+  decision: "APPROVED" | "REJECTED";
+  responseNotes: string | null;
+}) {
+  const isApproved = opts.decision === "APPROVED";
+  const subject = isApproved
+    ? `Change Request Approved: ${opts.crTitle}`
+    : `Change Request Rejected: ${opts.crTitle}`;
+
+  const html = wrap(`
+    <h2 style="color:#1a1f5e;margin:0 0 12px">Change Request ${isApproved ? "Approved" : "Rejected"}</h2>
+    <p style="color:#374151;font-size:14px">
+      Hi ${opts.submitterName}, your change request for <strong>${opts.projectName}</strong> has been
+      <strong style="color:${isApproved ? "#16a34a" : "#dc2626"}">${opts.decision.toLowerCase()}</strong>.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:14px 0">
+      ${infoRow("Change Request", opts.crTitle)}
+      ${infoRow("Project", opts.projectName)}
+      ${infoRow("Decision", opts.decision)}
+    </table>
+    ${opts.responseNotes ? `<div style="background:#f4f5fb;border:1px solid #e2e4f0;border-radius:8px;padding:14px;margin:14px 0"><p style="margin:0 0 4px;font-size:12px;font-weight:600;color:#6b7280">Response Notes</p><p style="margin:0;font-size:13px;color:#374151">${opts.responseNotes}</p></div>` : ""}
+    ${btn(projectLink(opts.projectId), "View Project →")}
+  `);
+
+  await send(opts.toEmail, subject, html);
+}
+
 // Keep the simple helper for new submissions (called from projects/route.ts)
 export const Notifications = {
   newRequestSubmitted: (opts: {

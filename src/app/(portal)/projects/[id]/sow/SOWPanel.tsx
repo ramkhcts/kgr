@@ -8,7 +8,15 @@ import { SignaturePad } from "@/components/sow/SignaturePad";
 import { FileText, Download, CheckCircle2, RotateCcw, Sparkles, Copy, Check } from "lucide-react";
 
 type DocMeta = { id: string; name: string; type: string };
-type Project = { id: string; status: string; documents?: DocMeta[] };
+type Project = {
+  id: string;
+  status: string;
+  documents?: DocMeta[];
+  msaReference?: string | null;
+  poValue?: number | null;
+  poCurrency?: string | null;
+  paymentTermsDays?: number | null;
+};
 
 interface AISOWContent {
   executiveSummary: string;
@@ -25,6 +33,7 @@ interface AISOWContent {
 export function SOWPanel({ project, userRole }: { project: Project; userRole: string }) {
   const router = useRouter();
   const [generating, setGenerating]           = useState(false);
+  const [sowError, setSOWError]               = useState("");
   const [signing, setSigning]                 = useState(false);
   const [rejecting, setRejecting]             = useState(false);
   const [signed, setSigned]                   = useState(false);
@@ -41,9 +50,17 @@ export function SOWPanel({ project, userRole }: { project: Project; userRole: st
 
   async function generateSOW() {
     setGenerating(true);
+    setSOWError("");
     try {
       const res = await fetch(`/api/projects/${project.id}/sow`, { method: "POST" });
-      if (res.ok) router.refresh();
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setSOWError(data.error || "Failed to generate SOW. Please try again.");
+        return;
+      }
+      router.refresh();
+    } catch {
+      setSOWError("Failed to connect to server. Please try again.");
     } finally {
       setGenerating(false);
     }
@@ -139,6 +156,21 @@ export function SOWPanel({ project, userRole }: { project: Project; userRole: st
     <>
       <Card>
         <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">SOW Actions</p>
+
+        {/* MSA reference */}
+        {project.msaReference && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-[#f4f5fb] border border-[#e2e4f0]">
+            <p className="text-[10px] text-gray-500 uppercase tracking-wide font-600">Governing Agreement</p>
+            <p className="text-sm font-600 text-[#1a1f5e] mt-0.5">{project.msaReference}</p>
+          </div>
+        )}
+
+        {/* SOW generation error */}
+        {sowError && (
+          <div className="mb-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+            <p className="text-xs text-red-700">{sowError}</p>
+          </div>
+        )}
 
         {signed ? (
           <div className="flex flex-col items-center py-8 gap-3">
@@ -299,6 +331,23 @@ export function SOWPanel({ project, userRole }: { project: Project; userRole: st
                 <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{content}</p>
               </div>
             ))}
+
+            {/* Payment Terms section */}
+            <div>
+              <p className="text-[11px] font-700 text-[#1a1f5e] uppercase tracking-wide mb-1.5">Payment Terms</p>
+              {project.paymentTermsDays || project.poValue ? (
+                <div className="space-y-0.5 text-sm text-gray-700">
+                  <p>Net {project.paymentTermsDays ?? 30} days</p>
+                  {project.poValue && (
+                    <p>
+                      PO Value: {project.poCurrency ?? "USD"} {project.poValue.toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-400 italic">To be confirmed.</p>
+              )}
+            </div>
 
             {aiSOW.deliverables?.length > 0 && (
               <div>
