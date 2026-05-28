@@ -48,9 +48,8 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       submittedBy: { select: { id: true, name: true, email: true } },
       assignedResource: { select: { id: true, name: true, email: true } },
       statusHistory: {
-        include: { changedBy: { select: { name: true } } },
-        orderBy: { changedAt: "desc" },
-        take: 20,
+        include: { changedBy: { select: { name: true, role: true } } },
+        orderBy: { changedAt: "asc" },
       },
       documents: {
         select: { id: true, name: true, type: true, mimeType: true, size: true, createdAt: true, version: true, supersededAt: true, uploadedBy: { select: { name: true } } },
@@ -550,24 +549,48 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
 
           {/* Activity Timeline */}
           <Card>
-            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">Status History</p>
-            <div className="space-y-3">
-              {project.statusHistory.map((h) => (
-                <div key={h.id} className="flex gap-3">
-                  <div className="flex-shrink-0 mt-1 w-2 h-2 rounded-full bg-[#1a1f5e]" />
-                  <div className="min-w-0">
-                    <p className="text-sm text-gray-800">
-                      <span className="font-600">{STATUS_LABELS[h.toStatus] ?? h.toStatus.replace(/_/g, " ")}</span>
-                      {h.fromStatus && <span className="text-gray-400"> from {STATUS_LABELS[h.fromStatus] ?? h.fromStatus.replace(/_/g, " ")}</span>}
-                    </p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-xs text-gray-400">{format(new Date(h.changedAt), "MMM d, yyyy 'at' h:mm a")}</p>
-                      {h.changedBy && <p className="text-xs text-gray-400">· {h.changedBy.name}</p>}
+            <p className="text-xs font-700 text-[#1a1f5e] uppercase tracking-wide mb-4">
+              Status History · {project.statusHistory.length} transitions
+            </p>
+            <div className="relative">
+              {/* vertical line */}
+              <div className="absolute left-[7px] top-2 bottom-2 w-px bg-[#e2e4f0]" />
+              <div className="space-y-4">
+                {project.statusHistory.map((h, i) => {
+                  const isCancel = h.toStatus === "CANCELLED" || h.toStatus === "CLOSED_REJECTED";
+                  const isInfo   = h.toStatus === "INFO_REQUIRED";
+                  const isClose  = h.toStatus === "CLOSED_SUCCESS";
+                  const dotColor = isCancel ? "#dc2626" : isInfo ? "#d97706" : isClose ? "#16a34a" : "#1a1f5e";
+                  const isLast   = i === project.statusHistory.length - 1;
+                  return (
+                    <div key={h.id} className="flex gap-3 relative">
+                      <div
+                        className="flex-shrink-0 w-[15px] h-[15px] rounded-full border-2 border-white ring-2 z-10 mt-0.5"
+                        style={{ backgroundColor: dotColor, ringColor: dotColor + "40" }}
+                      />
+                      <div className="min-w-0 pb-1">
+                        <p className="text-sm text-gray-800 leading-snug">
+                          <span className="font-600">{STATUS_LABELS[h.toStatus] ?? h.toStatus.replace(/_/g, " ")}</span>
+                          {h.fromStatus && (
+                            <span className="text-gray-400 text-xs"> ← {STATUS_LABELS[h.fromStatus] ?? h.fromStatus.replace(/_/g, " ")}</span>
+                          )}
+                          {isLast && <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-600 bg-[#1a1f5e]/10 text-[#1a1f5e]">Current</span>}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <p className="text-xs text-gray-400">{format(new Date(h.changedAt), "MMM d, yyyy 'at' h:mm a")}</p>
+                          {h.changedBy && (
+                            <span className="text-xs text-gray-500 font-500">
+                              · {h.changedBy.name}
+                              <span className="text-gray-400 font-400"> ({h.changedBy.role?.replace(/_/g, " ")})</span>
+                            </span>
+                          )}
+                        </div>
+                        {h.notes && <p className="text-xs text-gray-500 mt-1 italic bg-gray-50 rounded px-2 py-1">{h.notes}</p>}
+                      </div>
                     </div>
-                    {h.notes && <p className="text-xs text-gray-500 mt-1 italic">{h.notes}</p>}
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
             </div>
           </Card>
         </div>

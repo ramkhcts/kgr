@@ -299,25 +299,47 @@ async function main() {
       },
     });
 
-    // Status history trail
-    const statusTrail: string[] = ["SUBMITTED"];
+    // Status history trail — realistic role attribution + staggered timestamps
     const STATUS_ORDER = [
       "SUBMITTED", "UNDER_REVIEW", "SOLUTIONING", "SOW_DRAFT",
       "SOW_APPROVAL", "SOW_SIGNED", "PO_REQUESTED", "PO_RECEIVED",
       "RESOURCE_ASSIGNED", "CLOSED_SUCCESS",
     ];
+    // Who performs each transition (realistic role mapping)
+    const TRANSITION_ACTOR: Record<string, string> = {
+      SUBMITTED:           pd.submittedById,       // client submits
+      UNDER_REVIEW:        alice.id,               // PMO Lead picks up
+      SOLUTIONING:         alice.id,               // PMO Lead assigns to solutioning
+      SOW_DRAFT:           bob.id,                 // PMO Team (Solutioning) drafts
+      SOW_APPROVAL:        alice.id,               // PMO Lead sends for approval
+      SOW_SIGNED:          pd.submittedById,       // Client signs
+      PO_REQUESTED:        alice.id,               // PMO Lead requests PO
+      PO_RECEIVED:         alice.id,               // PMO Lead records PO
+      RESOURCE_ASSIGNED:   derek.id,              // PMO Team (Delivery) assigns
+      CLOSED_SUCCESS:      alice.id,               // PMO Lead closes
+    };
+    const statusTrail: string[] = ["SUBMITTED"];
     const currentIdx = STATUS_ORDER.indexOf(pd.status);
     for (let i = 1; i <= currentIdx; i++) statusTrail.push(STATUS_ORDER[i]);
     if (pd.status === "INFO_REQUIRED") statusTrail.push("UNDER_REVIEW", "INFO_REQUIRED");
-    if (pd.status === "UNDER_REVIEW") statusTrail.push("UNDER_REVIEW");
+    if (pd.status === "UNDER_REVIEW")  statusTrail.push("UNDER_REVIEW");
 
+    // Stagger timestamps: each transition 1-3 days after the previous
+    let trailDate = new Date(project.createdAt);
     for (let i = 1; i < statusTrail.length; i++) {
+      const daysGap = [1, 2, 3, 2, 4, 1, 3, 2, 2, 1][i] ?? 2;
+      trailDate = new Date(trailDate.getTime() + daysGap * 24 * 60 * 60 * 1000);
+      // Keep within past dates (don't exceed today)
+      const now = new Date();
+      const changedAt = trailDate > now ? now : trailDate;
+      const toStatus = statusTrail[i];
       await prisma.statusHistory.create({
         data: {
           projectId: project.id,
           fromStatus: statusTrail[i - 1],
-          toStatus: statusTrail[i],
-          changedById: i % 2 === 0 ? bob.id : alice.id,
+          toStatus,
+          changedById: TRANSITION_ACTOR[toStatus] ?? alice.id,
+          changedAt,
           notes: null,
         },
       });
