@@ -131,6 +131,32 @@ html {
   border-right: 1px solid #e2e4f0;
 }
 
+/* Dark mode CSS variables */
+[data-theme="dark"] {
+  --color-bg: #0f1117;
+  --color-surface: #1a1d2e;
+  --color-border: #2a2d3e;
+  --color-text-primary: #e2e4f0;
+  --color-text-secondary: #9ca3af;
+  --color-brand: #4f6ef7;
+}
+
+/* Dark mode body background */
+[data-theme="dark"] body {
+  background: #0f1117;
+  color: #e2e4f0;
+}
+
+/* Dark mode card */
+[data-theme="dark"] .card-elevated {
+  background: #1a1d2e;
+  border-color: #2a2d3e;
+}
+
+/* Dark mode scrollbar */
+[data-theme="dark"] ::-webkit-scrollbar-track { background: #1a1d2e; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #3a3d4e; }
+
 /* Responsive table wrapper — horizontal scroll on narrow screens */
 .table-scroll {
   overflow-x: auto;

@@ -1,7 +1,7 @@
 import { requireAuth } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { PlusCircle, X } from "lucide-react";
+import { PlusCircle, X, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { startOfMonth } from "date-fns";
@@ -168,6 +168,14 @@ export default async function ProjectsPage({
               );
             })}
           </div>
+
+          <Link
+            href="/projects/timeline"
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-[#e2e4f0] bg-white text-sm font-600 text-[#1a1f5e] hover:bg-[#f4f5fb] transition-colors"
+          >
+            <CalendarDays size={14} />
+            <span className="hidden sm:inline">Timeline</span>
+          </Link>
 
           {["CLIENT", "PMO_LEAD"].includes(user.role) && (
             <Link href="/projects/new">

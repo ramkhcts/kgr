@@ -4,12 +4,14 @@ import { Topbar } from "@/components/layout/Topbar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { SessionProvider } from "next-auth/react";
 import { PortalProvider } from "@/components/layout/PortalContext";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAuth();
 
   return (
     <SessionProvider>
+      <ThemeProvider>
       <PortalProvider>
         <div className="flex h-screen overflow-hidden bg-[#f4f5fb]">
           <Sidebar userRole={user.role} userName={user.name} />
@@ -22,6 +24,7 @@ export default async function PortalLayout({ children }: { children: React.React
         </div>
         <MobileNav userRole={user.role} />
       </PortalProvider>
+      </ThemeProvider>
     </SessionProvider>
   );
 }

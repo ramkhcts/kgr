@@ -18,7 +18,7 @@ import {
   DATA_CLASSIFICATION_COLORS, ITSM_PLATFORM_LABELS, SERVICE_TIER_LABELS, SERVICE_TIER_COLORS,
   SHIFT_PATTERN_LABELS, BG_CHECK_STATUS_LABELS, STATUS_LABELS,
 } from "@/types/enums";
-import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download, AlertTriangle, Users, Info, CheckCircle2, Star } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, DollarSign, User, Clock, FileText, Download, AlertTriangle, Users, Info, CheckCircle2, Star, FileDown } from "lucide-react";
 import Link from "next/link";
 import { AIInsightsPanel } from "@/components/projects/AIInsightsPanel";
 
@@ -176,6 +176,16 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                   projectName={project.projectName}
                   defaultName={project.projectName + " (Copy)"}
                 />
+              )}
+              {["PMO_LEAD", "SUPER_ADMIN"].includes(user.role) && (
+                <a
+                  href={`/api/projects/${project.id}/export-pdf`}
+                  download
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-600 bg-[#1a1f5e] text-[#d4a017] hover:bg-[#12174a] transition-colors"
+                >
+                  <FileDown size={14} />
+                  Export Report
+                </a>
               )}
             </div>
           </div>
@@ -566,7 +576,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
                       <div key={h.id} className="flex gap-3 relative">
                         <div
                           className="flex-shrink-0 w-[15px] h-[15px] rounded-full border-2 border-white ring-2 z-10 mt-0.5"
-                          style={{ backgroundColor: dotColor, ringColor: dotColor + "40" }}
+                          style={{ backgroundColor: dotColor }}
                         />
                         <div className="min-w-0 pb-1">
                           <p className="text-sm text-gray-800 leading-snug">

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { renderEmail } from "@/lib/email-templates";
 
 const isDev = !process.env.EMAIL_PASS || process.env.EMAIL_PASS === "your-app-password";
 
@@ -309,6 +310,36 @@ export async function sendCRDecisionNotification(opts: {
   `);
 
   await send(opts.toEmail, subject, html);
+}
+
+/**
+ * Send an email using a named template from email-templates.ts
+ */
+export async function sendTemplatedEmail(
+  to: string | string[],
+  type: string,
+  data: Record<string, string>
+) {
+  const { subject, html, text } = renderEmail(type, data);
+  const recipients = Array.isArray(to) ? to.filter(Boolean) : [to].filter(Boolean);
+  if (!recipients.length) return;
+
+  if (isDev) {
+    console.log(`\n📧 [EMAIL — dev mode, not sent]`);
+    console.log(`  Type:    ${type}`);
+    console.log(`  To:      ${recipients.join(", ")}`);
+    console.log(`  Subject: ${subject}`);
+    console.log(`  Text:    ${text.slice(0, 200)}\n`);
+    return;
+  }
+
+  await transporter!.sendMail({
+    from: process.env.EMAIL_FROM,
+    to: recipients.join(", "),
+    subject,
+    html,
+    text,
+  });
 }
 
 // Keep the simple helper for new submissions (called from projects/route.ts)

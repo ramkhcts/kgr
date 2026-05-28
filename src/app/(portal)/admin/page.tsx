@@ -57,6 +57,12 @@ export default async function AdminPage() {
         >
           Client Accounts →
         </Link>
+        <Link
+          href="/admin/templates"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-[#e2e4f0] bg-white text-sm font-600 text-[#1a1f5e] hover:bg-[#f4f5fb] transition-colors"
+        >
+          Manage Templates →
+        </Link>
       </div>
 
       {/* AI Settings — SUPER_ADMIN only */}

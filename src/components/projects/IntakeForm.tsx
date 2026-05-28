@@ -8,8 +8,24 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
+import { Modal } from "@/components/ui/Modal";
+
+type ProjectTemplate = {
+  id: string;
+  name: string;
+  description?: string | null;
+  scopeOfWork: string;
+  coverageModel?: string | null;
+  workplaceModel?: string | null;
+  numberOfFtes?: number | null;
+  region: string;
+  contractType?: string | null;
+  serviceTier?: string | null;
+  priority: string;
+  notes?: string | null;
+};
 import { CostEstimator } from "./CostEstimator";
-import { AlertCircle, CheckCircle2, Sparkles } from "lucide-react";
+import { AlertCircle, CheckCircle2, Sparkles, LayoutTemplate } from "lucide-react";
 import {
   PRIORITY_LABELS,
   PRIORITY_COLORS,
@@ -111,6 +127,30 @@ export function IntakeForm() {
   const [customFields, setCustomFields] = useState<CustomFormField[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string | boolean>>({});
   const [similarProjects, setSimilarProjects] = useState<{id:string;projectName:string;status:string;location:string}[]>([]);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
+
+  useEffect(() => {
+    fetch("/api/templates")
+      .then((r) => r.json())
+      .then((data: ProjectTemplate[]) => {
+        if (Array.isArray(data)) setTemplates(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  function applyTemplate(t: ProjectTemplate) {
+    if (t.scopeOfWork) setValue("scopeOfWork", t.scopeOfWork as "SITE_SUPPORT_SERVICES" | "SERVICE_DESK" | "REMOTE_COMMAND_CENTER" | "FIELD_SERVICES", { shouldValidate: false });
+    if (t.coverageModel) setValue("coverageModel", t.coverageModel as "STANDARD_8X5" | "EXTENDED_12X5" | "HOURS_24X7" | "FOLLOW_THE_SUN", { shouldValidate: false });
+    if (t.workplaceModel) setValue("workplaceModel", t.workplaceModel as "ON_SITE" | "ONSHORE_REMOTE" | "OFFSHORE_REMOTE" | "HYBRID_ON_SITE_ONSHORE" | "HYBRID_ON_SITE_OFFSHORE" | "HYBRID_ONSHORE_OFFSHORE" | "HYBRID_ALL", { shouldValidate: false });
+    if (t.numberOfFtes != null) setValue("numberOfFtes", t.numberOfFtes, { shouldValidate: false });
+    if (t.region) setValue("region", t.region as "NA" | "EMEA" | "LATAM" | "ASPAC", { shouldValidate: false });
+    if (t.contractType) setValue("contractType", t.contractType as "NOT_SURE" | "TIME_AND_MATERIALS" | "FIXED_PRICE" | "MANAGED_SERVICE", { shouldValidate: false });
+    if (t.serviceTier) setValue("serviceTier", t.serviceTier as "BASIC" | "STANDARD" | "PREMIUM" | "ENTERPRISE", { shouldValidate: false });
+    if (t.priority) setValue("priority", t.priority as "CRITICAL" | "HIGH" | "MEDIUM" | "LOW", { shouldValidate: false });
+    if (t.notes) setValue("notes", t.notes, { shouldValidate: false });
+    setShowTemplateModal(false);
+  }
 
   useEffect(() => {
     fetch("/api/form-config")
@@ -245,12 +285,37 @@ export function IntakeForm() {
     );
   }
 
+  const SCOPE_LABELS_MAP: Record<string, string> = {
+    SITE_SUPPORT_SERVICES: "Site Support Services",
+    SERVICE_DESK: "Service Desk",
+    REMOTE_COMMAND_CENTER: "Remote Command Center",
+    FIELD_SERVICES: "Field Services",
+  };
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       {error && (
         <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
           <AlertCircle size={14} className="flex-shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Use Template button */}
+      {templates.length > 0 && (
+        <div className="flex items-center justify-between p-3 rounded-xl bg-[#f4f5fb] border border-[#e2e4f0]">
+          <div>
+            <p className="text-sm font-600 text-[#1a1f5e]">Start from a template</p>
+            <p className="text-xs text-gray-500">{templates.length} template{templates.length !== 1 ? "s" : ""} available — pre-fills key fields</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowTemplateModal(true)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-600 text-[#3d2d8e] bg-[#3d2d8e]/10 hover:bg-[#3d2d8e]/15 transition-colors"
+          >
+            <LayoutTemplate size={14} />
+            Use Template
+          </button>
         </div>
       )}
 
@@ -756,6 +821,37 @@ export function IntakeForm() {
           Submit Request
         </Button>
       </div>
+
+      {/* Template picker modal */}
+      <Modal open={showTemplateModal} onClose={() => setShowTemplateModal(false)} title="Choose a Template" size="lg">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          {templates.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => applyTemplate(t)}
+              className="w-full text-left p-4 rounded-xl border border-[#e2e4f0] hover:border-[#1a1f5e] hover:bg-[#f4f5fb] transition-all group"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-700 text-[#1a1f5e] group-hover:text-[#1a1f5e]">{t.name}</p>
+                  {t.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{t.description}</p>}
+                </div>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span className="text-xs font-600 px-2 py-0.5 rounded-full bg-[#1a1f5e]/10 text-[#1a1f5e]">
+                    {SCOPE_LABELS_MAP[t.scopeOfWork] ?? t.scopeOfWork}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 mt-2">
+                {t.numberOfFtes && <span className="text-xs text-gray-500">{t.numberOfFtes} FTE{t.numberOfFtes !== 1 ? "s" : ""}</span>}
+                <span className="text-xs text-gray-500">{t.region}</span>
+                {t.priority && <span className="text-xs text-gray-500">{t.priority} priority</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+      </Modal>
     </form>
   );
 }

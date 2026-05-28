@@ -29,6 +29,7 @@ model User {
   skills          UserSkill[]
   notifications   Notification[]
   passwordResetTokens PasswordResetToken[]
+  createdTemplates ProjectTemplate[]
 }
 
 model Notification {
@@ -235,6 +236,26 @@ model RateCard {
   region        String   @default("NA")  // Region: NA | EMEA | LATAM | ASPAC
   effectiveDate DateTime @default(now())
   isActive      Boolean  @default(true)
+}
+
+model ProjectTemplate {
+  id               String   @id @default(cuid())
+  name             String
+  description      String?
+  scopeOfWork      String
+  coverageModel    String?
+  workplaceModel   String?
+  numberOfFtes     Int?
+  region           String   @default("NA")
+  contractType     String?
+  serviceTier      String?
+  priority         String   @default("MEDIUM")
+  notes            String?
+  createdById      String
+  createdBy        User     @relation(fields: [createdById], references: [id])
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model AuditLog {
