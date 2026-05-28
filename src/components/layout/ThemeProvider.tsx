@@ -8,7 +8,7 @@ import { useEffect } from "react";
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const saved = localStorage.getItem("kgr-theme") as "light" | "dark" | null;
-    const theme = saved === "light" ? "light" : "dark";
+    const theme = saved ?? "light"; // default to light
     document.documentElement.setAttribute("data-theme", theme);
   }, []);
 

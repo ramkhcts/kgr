@@ -141,19 +141,103 @@ html {
   --color-brand: #4f6ef7;
 }
 
-/* Dark mode body background */
+/* Dark mode — global */
 [data-theme="dark"] body {
-  background: #0f1117;
-  color: #e2e4f0;
+  background: #0f1117 !important;
+  color: #e2e4f0 !important;
 }
 
-/* Dark mode card */
-[data-theme="dark"] .card-elevated {
-  background: #1a1d2e;
+/* Dark mode — main layout surfaces */
+[data-theme="dark"] main,
+[data-theme="dark"] .card-elevated,
+[data-theme="dark"] [class*="bg-white"],
+[data-theme="dark"] [class*="bg-\[#f4f5fb\]"],
+[data-theme="dark"] [class*="bg-\[#fafafa\]"] {
+  background-color: #1a1d2e !important;
+  border-color: #2a2d3e !important;
+}
+
+/* Dark mode — rounded cards and panels */
+[data-theme="dark"] .rounded-2xl,
+[data-theme="dark"] .rounded-xl {
+  background-color: #1a1d2e;
   border-color: #2a2d3e;
 }
 
-/* Dark mode scrollbar */
+/* Dark mode — text */
+[data-theme="dark"] [class*="text-\[#1a1f5e\]"],
+[data-theme="dark"] [class*="text-gray-800"],
+[data-theme="dark"] [class*="text-gray-700"],
+[data-theme="dark"] [class*="text-gray-600"] {
+  color: #e2e4f0 !important;
+}
+[data-theme="dark"] [class*="text-gray-500"],
+[data-theme="dark"] [class*="text-gray-400"] {
+  color: #9ca3af !important;
+}
+
+/* Dark mode — table headers and rows */
+[data-theme="dark"] thead,
+[data-theme="dark"] thead tr,
+[data-theme="dark"] th {
+  background-color: #12162a !important;
+  color: #a5b4fc !important;
+  border-color: #2a2d3e !important;
+}
+[data-theme="dark"] td {
+  border-color: #2a2d3e !important;
+  color: #e2e4f0 !important;
+}
+[data-theme="dark"] tbody tr:hover {
+  background-color: #1e2235 !important;
+}
+
+/* Dark mode — inputs and selects */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #12162a !important;
+  color: #e2e4f0 !important;
+  border-color: #3a3d4e !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #6b7280 !important;
+}
+
+/* Dark mode — borders */
+[data-theme="dark"] [class*="border-\[#e2e4f0\]"],
+[data-theme="dark"] [class*="border-gray-200"],
+[data-theme="dark"] [class*="border-t"],
+[data-theme="dark"] [class*="border-b"] {
+  border-color: #2a2d3e !important;
+}
+
+/* Dark mode — sidebar */
+[data-theme="dark"] nav,
+[data-theme="dark"] aside {
+  background-color: #12162a !important;
+  border-color: #2a2d3e !important;
+}
+
+/* Dark mode — topbar */
+[data-theme="dark"] header {
+  background-color: #12162a !important;
+  border-color: #2a2d3e !important;
+}
+
+/* Dark mode — badges and pills with light backgrounds */
+[data-theme="dark"] [class*="bg-\[#f4f5fb\]"],
+[data-theme="dark"] [class*="bg-green-50"],
+[data-theme="dark"] [class*="bg-red-50"],
+[data-theme="dark"] [class*="bg-amber-50"],
+[data-theme="dark"] [class*="bg-blue-50"],
+[data-theme="dark"] [class*="bg-gray-50"],
+[data-theme="dark"] [class*="bg-indigo-50"] {
+  background-color: #1e2235 !important;
+}
+
+/* Dark mode — scrollbar */
 [data-theme="dark"] ::-webkit-scrollbar-track { background: #1a1d2e; }
 [data-theme="dark"] ::-webkit-scrollbar-thumb { background: #3a3d4e; }
 
