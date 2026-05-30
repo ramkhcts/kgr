@@ -28,6 +28,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   });
 
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  // CLIENT can only see their own projects
+  const user = session.user as { id: string; role: string };
+  if (user.role === "CLIENT" && project.submittedById !== user.id) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   return NextResponse.json(project);
 }
 

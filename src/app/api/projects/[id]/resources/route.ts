@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { assertProjectAccess } from "@/lib/project-access";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  const user = session.user as { id: string; role: string };
+  const { allowed } = await assertProjectAccess(id, user.id, user.role);
+  if (!allowed) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const resources = await prisma.projectResource.findMany({
     where: { projectId: id },
     include: { user: { select: { name: true, email: true } } },
