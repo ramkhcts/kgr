@@ -31,7 +31,15 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["bcryptjs", "nodemailer"],
+  // Keep native/platform-specific packages external so Turbopack doesn't bundle
+  // them with build-time hashes that break cross-platform deploys.
+  serverExternalPackages: [
+    "bcryptjs",
+    "nodemailer",
+    "@prisma/client",
+    "@prisma/engines",
+    "prisma",
+  ],
   async headers() {
     return [
       {
